@@ -386,7 +386,7 @@ async function attemptCheckInCreation(
       ) as Tournament;
 
       const proposedNumber = (tournament.orderCount || 0) + 1;
-      const eventKey = `${tournament.name}-${proposedNumber}`.toLowerCase().replace(/\s+/g, '-');
+      const eventKey = data.eventKey.toLowerCase().replace(/\s+/g, '-');
 
       // Attempt to create check-in with proposed number
       const checkIn = await databases.createDocument(
