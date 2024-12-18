@@ -1,0 +1,22 @@
+{
+  "inputPath": "./appwrite.json",
+  "outputPath": "./src/lib/appwrite/test_types.ts",
+  "enumConfig": {
+    "generateEnums": true,
+    "generateUnionTypes": true,
+    "namingStrategy": "pascal"
+  },
+  "interfaceConfig": {
+    "includeMetadata": true,
+    "optionalMetadata": true,
+    "interfacePrefix": "",
+    "interfaceSuffix": ""
+  },
+  "idConstantsConfig": {
+    "generateDatabaseConstants": true,
+    "generateCollectionConstants": true,
+    "constantPrefix": "",
+    "constantSuffix": "",
+    "includeComments": true
+  }
+}

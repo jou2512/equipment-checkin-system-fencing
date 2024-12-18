@@ -1,41 +1,35 @@
-import { create } from 'zustand'
-import { devtools } from 'zustand/middleware'
-
-export type Weapon = 'epee' | 'foil' | 'sabre'
-
-export type CheckableItem = {
-  id: string
-  name: string
-  forWeapons: Weapon[]
-}
-
-export type itemConfigs = {
-    itemId: string
-    itemName: string
-    maxQuantity: number
-    required: boolean
-  }[]
-
-export type TournamentConfig = {
-  id: string
-  name: string
-  activeWeapons: Weapon[]
-  itemConfigs: itemConfigs
-}
+import { create } from "zustand";
+import { devtools, persist } from "zustand/middleware";
 
 type TournamentState = {
-  currentTournament: TournamentConfig | null
-  setCurrentTournament: (tournament: TournamentConfig) => void
-  clearCurrentTournament: () => void
-}
+  currentTournamentId: string | null; // Only store the selected tournament's ID
+  setCurrentTournamentId: (tournamentId: string) => void;
+  clearCurrentTournament: () => void;
+};
 
 export const useTournamentStore = create<TournamentState>()(
   devtools(
-    (set) => ({
-      currentTournament: null,
-      setCurrentTournament: (tournament) => set({ currentTournament: tournament }),
-      clearCurrentTournament: () => set({ currentTournament: null }),
-    }),
-    { name: 'tournament-store' }
+    persist(
+      (set) => ({
+        currentTournamentId: null,
+
+        // Set the current tournament by ID
+        setCurrentTournamentId: (tournamentId: string) => {
+          set({ currentTournamentId: tournamentId });
+        },
+
+        // Clear the current tournament selection
+        clearCurrentTournament: () => {
+          set({ currentTournamentId: null });
+        },
+      }),
+      {
+        name: "tournament-storage",
+        partialize: (state) => ({
+          currentTournamentId: state.currentTournamentId, // Persist only the selected ID
+        }),
+      }
+    ),
+    { name: "tournament-store" }
   )
-)
+);

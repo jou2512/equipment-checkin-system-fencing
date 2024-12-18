@@ -1,7 +1,7 @@
 // src/lib/store/equipment-management-store.ts
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import { databases, COLLECTION_IDS, DATABASE_ID } from '@/lib/appwrite/config'
+import { databases } from '@/lib/appwrite/config'
 import { ID, Query } from 'appwrite'
 import { 
   EquipmentType, 
@@ -9,13 +9,12 @@ import {
   EquipmentPartDefect, 
   EquipmentPartCreationForm
 } from '@/lib/types/equipment-management'
-import { TreeNode } from '@/lib/utils/equipment-tree'
+import { COLLECTION_IDS, DATABASE_IDS } from '../appwrite/types'
 
 type EquipmentManagementState = {
     equipmentTypes: EquipmentType[]
     equipmentParts: EquipmentPart[]
     equipmentDefects: EquipmentPartDefect[]
-    equipmentPartsTree: TreeNode<EquipmentPart>[]
   
   // Fetching methods
   fetchEquipmentTypes: () => Promise<void>
@@ -50,8 +49,8 @@ export const useEquipmentManagementStore = create<EquipmentManagementState>()(
       fetchEquipmentTypes: async () => {
         try {
           const response = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTION_IDS.equipmentTypes
+            DATABASE_IDS.CHECKING_SYSTEM,
+            COLLECTION_IDS.EQUIPMENTTYPES
           )
           set({ equipmentTypes: response.documents as unknown as EquipmentType[] })
         } catch (error) {
@@ -68,8 +67,8 @@ export const useEquipmentManagementStore = create<EquipmentManagementState>()(
             : []
           
           const response = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTION_IDS.equipmentParts,
+             DATABASE_IDS.CHECKING_SYSTEM,
+            COLLECTION_IDS.EQUIPMENTPARTS,
             queries
           )
           set({ equipmentParts: response.documents as unknown as EquipmentPart[] })
@@ -87,8 +86,8 @@ export const useEquipmentManagementStore = create<EquipmentManagementState>()(
             : []
           
           const response = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTION_IDS.equipmentPartDefects,
+             DATABASE_IDS.CHECKING_SYSTEM,
+            COLLECTION_IDS.EQUIPMENTPARTDEFECTS,
             queries
           )
           set({ equipmentDefects: response.documents as unknown as EquipmentPartDefect[] })
@@ -102,8 +101,8 @@ export const useEquipmentManagementStore = create<EquipmentManagementState>()(
       createEquipmentType: async (type) => {
         try {
           const newType = await databases.createDocument(
-            DATABASE_ID,
-            COLLECTION_IDS.equipmentTypes,
+             DATABASE_IDS.CHECKING_SYSTEM,
+            COLLECTION_IDS.EQUIPMENTTYPES,
             ID.unique(),
             { ...type, partIds: [] }
           )
@@ -122,16 +121,16 @@ export const useEquipmentManagementStore = create<EquipmentManagementState>()(
         try {
             // Fetch current type to ensure we have the latest data
             const currentType = await databases.getDocument(
-                DATABASE_ID,
-                COLLECTION_IDS.equipmentTypes,
+                 DATABASE_IDS.CHECKING_SYSTEM,
+                COLLECTION_IDS.EQUIPMENTTYPES,
                 part.equipmentTypeId
             )
             console.log(currentType)
                 console.log(part.name.toLowerCase().replace(" ", "-")+"_"+ID.unique())
           // Create the part document
           const newPart = await databases.createDocument(
-            DATABASE_ID,
-            COLLECTION_IDS.equipmentParts,
+             DATABASE_IDS.CHECKING_SYSTEM,
+            COLLECTION_IDS.EQUIPMENTPARTS,
             part.name.toLowerCase().replace(" ", "-")+"_"+ID.unique(),
             {
               name: part.name,
@@ -145,8 +144,8 @@ export const useEquipmentManagementStore = create<EquipmentManagementState>()(
           // Update the equipment type's part list
           // Use the '$push' method instead of '$append'
           await databases.updateDocument(
-            DATABASE_ID,
-            COLLECTION_IDS.equipmentTypes,
+             DATABASE_IDS.CHECKING_SYSTEM,
+            COLLECTION_IDS.EQUIPMENTTYPES,
             part.equipmentTypeId,
             {
                 partIds: Array.from(new Set([
@@ -172,8 +171,8 @@ export const useEquipmentManagementStore = create<EquipmentManagementState>()(
       createEquipmentDefect: async (defect) => {
         try {
           const newDefect = await databases.createDocument(
-            DATABASE_ID,
-            COLLECTION_IDS.equipmentPartDefects,
+             DATABASE_IDS.CHECKING_SYSTEM,
+            COLLECTION_IDS.EQUIPMENTPARTDEFECTS,
             ID.unique(),
             { 
               ...defect, 
@@ -195,8 +194,8 @@ export const useEquipmentManagementStore = create<EquipmentManagementState>()(
       updateEquipmentType: async (id, updates) => {
         try {
           const updatedType = await databases.updateDocument(
-            DATABASE_ID,
-            COLLECTION_IDS.equipmentTypes,
+             DATABASE_IDS.CHECKING_SYSTEM,
+            COLLECTION_IDS.EQUIPMENTTYPES,
             id,
             updates
           )
@@ -220,8 +219,8 @@ export const useEquipmentManagementStore = create<EquipmentManagementState>()(
       deleteEquipmentType: async (id) => {
         try {
           await databases.deleteDocument(
-            DATABASE_ID,
-            COLLECTION_IDS.equipmentTypes,
+             DATABASE_IDS.CHECKING_SYSTEM,
+            COLLECTION_IDS.EQUIPMENTTYPES,
             id
           )
           
