@@ -28,8 +28,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import TournamentSelector from "@/components/tournament/TournamentSelector";
 import { z } from "zod";
+import { Check, QrCode } from "lucide-react";
+
+// Feature flags at the top of the file for easy modification
+const FEATURES = {
+  NOTIFICATIONS: false, // Toggle notification features
+};
 
 // Validation Schemas
 const CheckInStatusSchema = z.nativeEnum(CheckInCheckInStatus);
@@ -107,7 +114,7 @@ type ValidatedCheckInData = z.infer<typeof CheckInSubmissionSchema>;
 export default function ItemSubmissionPage() {
   // State for progressive disclosure
   const [currentStep, setCurrentStep] = useState<
-    "weapon" | "details" | "items" | "success"
+    "weapon" | "details" | "items" | "notifications" | "review" | "success"
   >("weapon");
   const [selectedWeapon, setSelectedWeapon] =
     useState<TournamentActiveWeaponsType | null>(null);
@@ -127,6 +134,14 @@ export default function ItemSubmissionPage() {
   );
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submissionData, setSubmissionData] = useState<any>(null);
+
+  // New state for notifications
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [notificationPreferences, setNotificationPreferences] = useState({
+    status: false,
+    pickup: false,
+  });
+
 
   const resetForm = () => {
     setCurrentStep(hasMultipleWeapons() ? "weapon" : "details");
@@ -154,6 +169,9 @@ export default function ItemSubmissionPage() {
       if (weapons.length === 1) {
         setSelectedWeapon(weapons[0]);
         setCurrentStep("details");
+      } else {
+        setSelectedWeapon(null);
+        setCurrentStep("weapon");
       }
     }
   }, [currentTournament]);
@@ -224,6 +242,33 @@ export default function ItemSubmissionPage() {
         );
       }
     }
+  };
+
+  // Review data formatting
+  const getReviewData = () => {
+    return {
+      fencer: {
+        name: fencerName || "Not provided",
+        nationality: fencerNationality || "Not provided",
+        weapon: selectedWeapon,
+        phone: FEATURES.NOTIFICATIONS
+          ? phoneNumber || "Not provided"
+          : undefined,
+      },
+      equipment: ((currentTournament?.itemConfigs as ItemConfig[]) || [])
+        .map((item) => ({
+          name: item.itemName,
+          quantity: itemQuantities[item.$id as string] || 0,
+          required: item.required,
+        }))
+        .filter((item) => item.quantity > 0 || item.required),
+      notifications: FEATURES.NOTIFICATIONS
+        ? {
+            status: notificationPreferences.status,
+            pickup: notificationPreferences.pickup,
+          }
+        : undefined,
+    };
   };
 
   // Loading state
@@ -304,7 +349,7 @@ export default function ItemSubmissionPage() {
     <div className="space-y-6 max-w-2xl mx-auto">
       <h1 className="text-3xl font-bold">Equipment Submission</h1>
 
-      {/* Weapon Selection (only shown for multiple weapons) */}
+      {/* Weapon Selection */}
       {currentStep === "weapon" && hasMultipleWeapons() && (
         <Card>
           <CardHeader>
@@ -326,14 +371,7 @@ export default function ItemSubmissionPage() {
               ))}
             </div>
             <div className="flex justify-between mt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSelectedWeapon(null);
-                  // Return to tournament selection
-                  window.history.back();
-                }}
-              >
+              <Button variant="outline" onClick={() => window.history.back()}>
                 Back to Tournament Selection
               </Button>
             </div>
@@ -343,132 +381,341 @@ export default function ItemSubmissionPage() {
 
       {/* Fencer Details */}
       {currentStep === "details" && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Fencer Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="fencerName">Fencer Name</Label>
-                <Input
-                  id="fencerName"
-                  value={fencerName}
-                  onChange={(e) => setFencerName(e.target.value)}
-                  placeholder="Enter fencer's name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="fencerNationality">Nationality Code</Label>
-                <Input
-                  id="fencerNationality"
-                  value={fencerNationality}
-                  onChange={(e) =>
-                    setFencerNationality(e.target.value.toUpperCase())
-                  }
-                  maxLength={3}
-                  placeholder="e.g., USA, GER"
-                />
-              </div>
-              <div className="flex justify-between mt-4">
-                {hasMultipleWeapons() && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedWeapon(null);
-                      setCurrentStep("weapon");
-                    }}
-                  >
-                    Back to Weapon Selection
-                  </Button>
-                )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Fencer Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="fencerName">Fencer Name</Label>
+              <Input
+                id="fencerName"
+                value={fencerName}
+                onChange={(e) => setFencerName(e.target.value)}
+                placeholder="Enter fencer's name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fencerNationality">Nationality Code</Label>
+              <Input
+                id="fencerNationality"
+                value={fencerNationality}
+                onChange={(e) =>
+                  setFencerNationality(e.target.value.toUpperCase())
+                }
+                maxLength={3}
+                placeholder="e.g., USA, GER"
+              />
+            </div>
+            <div className="flex justify-between mt-4">
+              {hasMultipleWeapons() && (
                 <Button
-                  className="ml-auto"
-                  onClick={() => setCurrentStep("items")}
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedWeapon(null);
+                    setCurrentStep("weapon");
+                  }}
                 >
-                  Continue to Equipment Selection
+                  Back to Weapon Selection
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </>
+              )}
+              <Button
+                className={hasMultipleWeapons() ? "" : "ml-auto"}
+                onClick={() => setCurrentStep("items")}
+              >
+                Continue to Equipment Selection
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Equipment Selection */}
       {currentStep === "items" && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Equipment Selection</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {(
-                (currentTournament as Tournament).itemConfigs as ItemConfig[]
-              )?.map((item) => (
-                <div
-                  key={item.$id}
-                  className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0 p-4 border rounded-lg"
-                >
-                  <div className="flex-grow">
-                    <h3 className="font-medium">{item.itemName}</h3>
-                    {item.required && (
-                      <span className="text-xs text-red-500">
-                        Required Item
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="grid grid-cols-5 gap-1">
-                      {[...Array(item.maxQuantity + 1)].map((_, index) => (
-                        <Button
-                          key={`${item.$id}_${index}`}
-                          size="lg"
-                          variant={
-                            itemQuantities[item.$id as string] === index
-                              ? "default"
-                              : "outline"
-                          }
-                          onClick={() =>
-                            setItemQuantities((prev) => ({
-                              ...prev,
-                              [item.$id as string]: index,
-                            }))
-                          }
-                          className="w-10 h-10 p-0"
-                        >
-                          {index}
-                        </Button>
-                      ))}
-                    </div>
-                    <span className="text-sm text-gray-500">
-                      Max: {item.maxQuantity}
-                    </span>
-                  </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Equipment Selection</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {(
+              (currentTournament as Tournament).itemConfigs as ItemConfig[]
+            )?.map((item) => (
+              <div
+                key={item.$id}
+                className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0 p-4 border rounded-lg"
+              >
+                <div className="flex-grow">
+                  <h3 className="font-medium">{item.itemName}</h3>
+                  {item.required && (
+                    <span className="text-xs text-red-500">Required Item</span>
+                  )}
                 </div>
-              ))}
-
-              <div className="flex justify-between mt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentStep("details")}
-                >
-                  Back to Fencer Details
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={createCheckIn.isPending}
-                >
-                  {createCheckIn.isPending
-                    ? "Submitting..."
-                    : "Submit Equipment"}
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <div className="grid grid-cols-5 gap-1">
+                    {[...Array(item.maxQuantity + 1)].map((_, index) => (
+                      <Button
+                        key={`${item.$id}_${index}`}
+                        size="lg"
+                        variant={
+                          itemQuantities[item.$id as string] === index
+                            ? "default"
+                            : "outline"
+                        }
+                        onClick={() =>
+                          setItemQuantities((prev) => ({
+                            ...prev,
+                            [item.$id as string]: index,
+                          }))
+                        }
+                        className="w-10 h-10 p-0"
+                      >
+                        {index}
+                      </Button>
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-500">
+                    Max: {item.maxQuantity}
+                  </span>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </>
+            ))}
+
+            <div className="flex justify-between mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentStep("details")}
+              >
+                Back to Fencer Details
+              </Button>
+              <Button
+                onClick={() =>
+                  setCurrentStep(
+                    FEATURES.NOTIFICATIONS ? "notifications" : "review"
+                  )
+                }
+              >
+                Continue to Review
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Validation Error Dialog */}
+      {/* Notifications (Feature Flagged) */}
+      {FEATURES.NOTIFICATIONS && currentStep === "notifications" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Notification Preferences</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="+1234567890"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Notification Options</Label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="status"
+                    checked={notificationPreferences.status}
+                    onCheckedChange={(checked) =>
+                      setNotificationPreferences((prev) => ({
+                        ...prev,
+                        status: checked as boolean,
+                      }))
+                    }
+                  />
+                  <Label htmlFor="status">Equipment check status updates</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="pickup"
+                    checked={notificationPreferences.pickup}
+                    onCheckedChange={(checked) =>
+                      setNotificationPreferences((prev) => ({
+                        ...prev,
+                        pickup: checked as boolean,
+                      }))
+                    }
+                  />
+                  <Label htmlFor="pickup">Equipment ready for pickup</Label>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-between mt-4">
+              <Button variant="outline" onClick={() => setCurrentStep("items")}>
+                Back
+              </Button>
+              <Button onClick={() => setCurrentStep("review")}>
+                Continue to Review
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Review Step */}
+      {currentStep === "review" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Review Submission</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold mb-2">Fencer Details</h3>
+                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                  <p>
+                    <span className="font-medium">Name:</span>{" "}
+                    {fencerName || "Not provided"}
+                  </p>
+                  <p>
+                    <span className="font-medium">Nationality:</span>{" "}
+                    {fencerNationality || "Not provided"}
+                  </p>
+                  <p>
+                    <span className="font-medium">Weapon:</span>{" "}
+                    {selectedWeapon}
+                  </p>
+                  {FEATURES.NOTIFICATIONS && (
+                    <p>
+                      <span className="font-medium">Phone:</span>{" "}
+                      {phoneNumber || "Not provided"}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">Equipment</h3>
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <ul className="space-y-2">
+                    {(
+                      (currentTournament as Tournament)
+                        .itemConfigs as ItemConfig[]
+                    )?.map(
+                      (item) =>
+                        itemQuantities[item.$id as string] > 0 && (
+                          <li key={item.$id} className="flex justify-between">
+                            <span className="font-medium">{item.itemName}</span>
+                            <span>{itemQuantities[item.$id as string]}</span>
+                          </li>
+                        )
+                    )}
+                  </ul>
+                </div>
+              </div>
+
+              {FEATURES.NOTIFICATIONS && (
+                <div>
+                  <h3 className="font-semibold mb-2">Notifications</h3>
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <ul className="space-y-2">
+                      <li className="flex items-center">
+                        <Check className="mr-2 h-4 w-4" />
+                        Status updates:{" "}
+                        {notificationPreferences.status ? "Yes" : "No"}
+                      </li>
+                      <li className="flex items-center">
+                        <Check className="mr-2 h-4 w-4" />
+                        Pickup notification:{" "}
+                        {notificationPreferences.pickup ? "Yes" : "No"}
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-between mt-6">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setCurrentStep(
+                    FEATURES.NOTIFICATIONS ? "notifications" : "items"
+                  )
+                }
+              >
+                Back
+              </Button>
+              <Button onClick={handleSubmit} disabled={createCheckIn.isPending}>
+                {createCheckIn.isPending
+                  ? "Submitting..."
+                  : "Confirm Submission"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Success View */}
+      {currentStep === "success" && submissionData && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Submission Successful</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-primary/10 p-6 rounded-lg text-center">
+              <h2 className="text-4xl font-bold mb-4">Check Number</h2>
+              <div className="text-5xl font-mono font-bold text-primary">
+                {submissionData.checkNumber}
+              </div>
+              <div className="mt-4 flex justify-center">
+                <QrCode className="h-32 w-32 text-primary" />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-semibold">Details</h3>
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                <p>
+                  <span className="font-medium">Fencer:</span>{" "}
+                  {submissionData.fencerName || "Not provided"}
+                </p>
+                <p>
+                  <span className="font-medium">Nationality:</span>{" "}
+                  {submissionData.nationalityCode || "Not provided"}
+                </p>
+                <p>
+                  <span className="font-medium">Weapon:</span>{" "}
+                  {submissionData.weaponType}
+                </p>
+              </div>
+
+              <h3 className="font-semibold">Submitted Items</h3>
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <ul className="space-y-2">
+                  {submissionData.itemChecks.map(
+                    (item: any) =>
+                      item.quantity > 0 && (
+                        <li
+                          key={item.itemName}
+                          className="flex justify-between"
+                        >
+                          <span>{item.itemName}</span>
+                          <span className="font-medium">{item.quantity}</span>
+                        </li>
+                      )
+                  )}
+                </ul>
+              </div>
+            </div>
+
+            <Button className="w-full mt-6" onClick={resetForm}>
+              Start New Submission
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error Dialog */}
       {validationError && (
         <AlertDialog
           open={!!validationError}
@@ -476,7 +723,7 @@ export default function ItemSubmissionPage() {
         >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Error</AlertDialogTitle>
+              <AlertDialogTitle>Validation Error</AlertDialogTitle>
               <AlertDialogDescription>{validationError}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
