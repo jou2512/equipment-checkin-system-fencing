@@ -566,6 +566,39 @@
                     ],
                     "format": "enum",
                     "default": "pending"
+                },
+                {
+                    "key": "submissions",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedCollection": "submissions",
+                    "relationType": "manyToOne",
+                    "twoWay": true,
+                    "twoWayKey": "checkInDocument",
+                    "onDelete": "setNull",
+                    "side": "child"
+                },
+                {
+                    "key": "currentVersion",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 1,
+                    "max": 9223372036854775807,
+                    "default": 1
+                },
+                {
+                    "key": "latestSubmission",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedCollection": "submissions",
+                    "relationType": "oneToOne",
+                    "twoWay": false,
+                    "twoWayKey": "6762f1a000058a02f0b2",
+                    "onDelete": "setNull",
+                    "side": "parent"
                 }
             ],
             "indexes": [
@@ -580,6 +613,108 @@
                     "orders": [
                         "ASC",
                         "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "submissions",
+            "$permissions": [],
+            "databaseId": "675b83ef00172e714622",
+            "name": "submissions",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "checkInDocument",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedCollection": "checkIns",
+                    "relationType": "manyToOne",
+                    "twoWay": true,
+                    "twoWayKey": "submissions",
+                    "onDelete": "setNull",
+                    "side": "parent"
+                },
+                {
+                    "key": "checkInKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null
+                },
+                {
+                    "key": "versionNumber",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 1,
+                    "max": 9223372036854775807,
+                    "default": 1
+                },
+                {
+                    "key": "snapshotJson",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100000,
+                    "default": null
+                },
+                {
+                    "key": "changesJson",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100000,
+                    "default": null
+                },
+                {
+                    "key": "action",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "create",
+                        "update",
+                        "revert"
+                    ],
+                    "format": "enum",
+                    "default": "create"
+                },
+                {
+                    "key": "comment",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 10000,
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "check_in_version",
+                    "type": "unique",
+                    "status": "available",
+                    "attributes": [
+                        "checkInKey",
+                        "versionNumber"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "updated_at",
+                    "type": "key",
+                    "status": "available",
+                    "attributes": [
+                        "$updatedAt"
+                    ],
+                    "orders": [
+                        "DESC"
                     ]
                 }
             ]

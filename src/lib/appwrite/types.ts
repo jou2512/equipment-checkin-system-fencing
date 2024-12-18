@@ -1,5 +1,5 @@
 // Auto-generated Appwrite Types
-// Generated on 2024-12-17T21:30:16.550Z
+// Generated on 2024-12-18T16:06:25.553Z
 // WARNING: This file is auto-generated. Do not modify manually.
 
 
@@ -26,6 +26,12 @@ export type TournamentActiveWeaponsType = "epee" | "foil" | "sabre";
  * Provides a union type of possible values
  */
 export type CheckInCheckInStatusType = "pending" | "in_review" | "approved" | "partially_approved" | "rejected";
+
+/**
+ * Type definition for SubmissionAction
+ * Provides a union type of possible values
+ */
+export type SubmissionActionType = "create" | "update" | "revert";
 
 
 /**
@@ -86,6 +92,19 @@ export enum CheckInCheckInStatus {
   PARTIALLY_APPROVED = "partially_approved",
   /** Represents rejected option in CheckInCheckInStatus */
   REJECTED = "rejected"
+}
+
+/**
+ * Enum type for SubmissionAction
+ * Provides type-safe representation of possible values
+ */
+export enum SubmissionAction {
+  /** Represents create option in SubmissionAction */
+  CREATE = "create",
+  /** Represents update option in SubmissionAction */
+  UPDATE = "update",
+  /** Represents revert option in SubmissionAction */
+  REVERT = "revert"
 }
 
 
@@ -332,6 +351,51 @@ export interface CheckIn {
   /** Max size: 32 characters */
   eventKey: string;
   CheckInStatus?: "pending" | "in_review" | "approved" | "partially_approved" | "rejected";
+  /** Relationship type: manyToOne */
+  /** Related collection: submissions */
+  /** Two-way relationship with key: checkInDocument */
+  /** Deletion behavior: setNull */
+  submissions?: (Submission | string)[];
+  currentVersion?: number;
+  /** Relationship type: oneToOne */
+  /** Related collection: submissions */
+  /** Deletion behavior: setNull */
+  latestSubmission?: (Submission | string) | null;
+}
+
+
+/**
+ * Represents a Submission document in the Appwrite database
+ * @interface
+ */
+export interface Submission {
+  /** Unique document identifier */
+  $id?: string;
+  /** Document creation timestamp */
+  $createdAt?: string;
+  /** Document last update timestamp */
+  $updatedAt?: string;
+  /** Database identifier */
+  $databaseId?: string;
+  /** Collection identifier */
+  $collectionId?: string;
+  /** Document-level permissions */
+  $permissions?: string[];
+  /** Relationship type: manyToOne */
+  /** Related collection: checkIns */
+  /** Two-way relationship with key: submissions */
+  /** Deletion behavior: setNull */
+  checkInDocument?: (CheckIn | string) | null;
+  /** Max size: 32 characters */
+  checkInKey: string;
+  versionNumber?: number;
+  /** Max size: 100000 characters */
+  snapshotJson: string;
+  /** Max size: 100000 characters */
+  changesJson?: string;
+  action?: "create" | "update" | "revert";
+  /** Max size: 10000 characters */
+  comment?: string;
 }
 
 
@@ -350,4 +414,5 @@ export const COLLECTION_IDS = {
   CHECKINITEM: 'checkinitem',
   TOURNAMENTS: 'tournaments',
   CHECKINS: 'checkIns',
+  SUBMISSIONS: 'submissions',
 };
