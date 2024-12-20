@@ -1,4 +1,3 @@
-// components/admin/admin-breadcrumb.tsx
 "use client";
 
 import { useMemo } from "react";
@@ -10,7 +9,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import Link from "next/link";
 import { ADMIN_ROUTE_TITLES } from "@/config/admin-routes";
 import { useAdminNavigationContext } from "@/contexts/dashboard-navigation-context";
 
@@ -43,7 +41,7 @@ export function AdminBreadcrumb() {
                 >
                   {segment.title}
                 </BreadcrumbLink>
-                <BreadcrumbSeparator />
+                {index < segments.length - 1 && <BreadcrumbSeparator />}
               </>
             ) : (
               <BreadcrumbPage className="text-sm font-medium">

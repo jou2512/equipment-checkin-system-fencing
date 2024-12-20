@@ -46,6 +46,7 @@ export function useSubmissions() {
   // Create a new submission version
   const createSubmissionVersion = useMutation({
     mutationFn: async (submissionData: Omit<Submission, '$id' | '$createdAt' | '$updatetAt'>) => {
+      console.log(submissionData)
       return await databases.createDocument(
         DATABASE_IDS.CHECKING_SYSTEM,
         COLLECTION_IDS.SUBMISSIONS,
@@ -78,6 +79,7 @@ export function useSubmissions() {
         }
     },
     onError: (error) => {
+      console.log(error)
       toast({
         title: "Version Creation Failed",
         description: error instanceof Error ? error.message : "Unknown error",

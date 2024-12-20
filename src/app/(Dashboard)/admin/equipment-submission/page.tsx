@@ -5,14 +5,11 @@ import { useTournamentStore } from "@/lib/store/tournament-store";
 import { useCheckInStore } from "@/lib/store/check-in-store";
 import { useTournaments } from "@/hooks/use-tournaments";
 import { useCheckIns } from "@/hooks/use-checkIn";
-import { toast } from "@/hooks/use-toast";
 import {
   CheckInCheckInStatus,
   TournamentActiveWeaponsType,
   ItemConfig,
   Tournament,
-  CheckIn,
-  Checkinitem,
   TournamentActiveWeapons,
 } from "@/lib/appwrite/types";
 import { Button } from "@/components/ui/button";
@@ -144,35 +141,27 @@ export default function ItemSubmissionPage() {
 
 
   const resetForm = () => {
-    setCurrentStep(hasMultipleWeapons() ? "weapon" : "details");
-    setSelectedWeapon(null);
-    setFencerName("");
+    setCurrentStep(Weapons().hasMultiple ? "weapon" : "details");
+    setSelectedWeapon(Weapons().hasMultiple ? null : Weapons().weapons[0])
     setFencerNationality("");
     setItemQuantities({});
     setSubmissionData(null);
   };
 
   // Helper function to check if tournament has multiple weapons
-  const hasMultipleWeapons = () => {
-    return (
-      currentTournament?.activeWeapons &&
-      (currentTournament.activeWeapons as TournamentActiveWeaponsType[])
-        .length > 1
-    );
+  const Weapons = () => {
+    const weapons = (currentTournament as Tournament).activeWeapons as TournamentActiveWeaponsType[]
+    return ({
+      hasMultiple: currentTournament?.activeWeapons && weapons.length > 1 as boolean,
+      weapons
+    });
   };
 
   // Initialize form based on tournament weapons
   useEffect(() => {
     if (currentTournament) {
-      const weapons =
-        currentTournament.activeWeapons as TournamentActiveWeaponsType[];
-      if (weapons.length === 1) {
-        setSelectedWeapon(weapons[0]);
-        setCurrentStep("details");
-      } else {
-        setSelectedWeapon(null);
-        setCurrentStep("weapon");
-      }
+      setCurrentStep(Weapons().hasMultiple ? "weapon" : "details");
+      setSelectedWeapon(Weapons().hasMultiple ? null : Weapons().weapons[0]);
     }
   }, [currentTournament]);
 
@@ -350,7 +339,7 @@ export default function ItemSubmissionPage() {
       <h1 className="text-3xl font-bold">Equipment Submission</h1>
 
       {/* Weapon Selection */}
-      {currentStep === "weapon" && hasMultipleWeapons() && (
+      {currentStep === "weapon" && Weapons().hasMultiple && (
         <Card>
           <CardHeader>
             <CardTitle>Select Weapon</CardTitle>
@@ -408,7 +397,7 @@ export default function ItemSubmissionPage() {
               />
             </div>
             <div className="flex justify-between mt-4">
-              {hasMultipleWeapons() && (
+              {Weapons().hasMultiple && (
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -420,7 +409,7 @@ export default function ItemSubmissionPage() {
                 </Button>
               )}
               <Button
-                className={hasMultipleWeapons() ? "" : "ml-auto"}
+                className={Weapons().hasMultiple ? "" : "ml-auto"}
                 onClick={() => setCurrentStep("items")}
               >
                 Continue to Equipment Selection

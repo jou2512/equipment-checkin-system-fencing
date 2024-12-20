@@ -2,12 +2,14 @@
 import { AdminRouteGroup } from "@/lib/types/dashboard-sidebar";
 import { 
   SquareTerminal, 
-  Settings, 
-  Package, 
+  Settings,
   CheckSquare,
   Projector,
   LifeBuoy,
-  Send} from "lucide-react";
+  Send,
+  FileCog,
+  List,
+  Tag} from "lucide-react";
 
 export const ADMIN_ROUTES: AdminRouteGroup[] = [
   {
@@ -25,9 +27,19 @@ export const ADMIN_ROUTES: AdminRouteGroup[] = [
         icon: Settings
       },
       {
-        title: "Equipment Submission",
+        title: "Item CheckIn",
         url: "/admin/equipment-submission",
-        icon: Package
+        icon: Tag
+      },
+      {
+        title: "Submissions",
+        url: "/admin/submissions",
+        icon: List
+      },
+      {
+        title: "General Configurations",
+        url: "/admin/equipment-management",
+        icon: FileCog
       },
       {
         title: "Status Checking",

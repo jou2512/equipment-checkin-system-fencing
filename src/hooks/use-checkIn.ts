@@ -17,6 +17,7 @@ import {
 } from '@/lib/appwrite/types';
 import { toast } from './use-toast';
 import { ZodError, z } from "zod";
+import { useSubmissions } from './use-submissions';
 
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1000; // 1 second
@@ -59,12 +60,13 @@ const CheckInUpdateSchema = z.object({
 }).strict();
 
 // Types derived from schemas
-type CheckInUpdate = z.infer<typeof CheckInUpdateSchema>;
+export type CheckInUpdate = z.infer<typeof CheckInUpdateSchema>;
 type CheckinItemType = z.infer<typeof CheckinItemSchema>;
 
 export function useCheckIns() {
   const queryClient = useQueryClient();
   const { checkInFilter } = useCheckInStore();
+  const { createSubmissionVersion } = useSubmissions(); // Import this hook
 
   // Fetch check-ins with filtering
   const {
@@ -123,7 +125,19 @@ export function useCheckIns() {
         throw new Error('Tournament ID is required');
       }
 
-      return await attemptCheckInCreation(tournamentId, data);
+      const checkIn = await attemptCheckInCreation(tournamentId, data);
+      // Create initial submission version
+      await createSubmissionVersion.mutateAsync({
+        checkInDocument: checkIn.$id,
+        checkInKey: checkIn.$id as string,
+        versionNumber: 1, // First version
+        snapshotJson: JSON.stringify(checkIn),
+        changesJson: JSON.stringify({}), // No changes for initial creation
+        action: 'create',
+        comment: 'Initial check-in submission'
+      });
+      
+      return checkIn;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['checkIns'] });
@@ -261,9 +275,21 @@ export function useCheckIns() {
           COLLECTION_IDS.CHECKINS,
           checkInId,
           {
-            ...validatedUpdates
+            ...validatedUpdates,
+            currentVersion: (currentCheckIn.currentVersion || 0) + 1
           }
         );
+
+        // Create submission version for update
+        await createSubmissionVersion.mutateAsync({
+          checkInDocument: checkInId,
+          checkInKey: checkInId,
+          versionNumber: (updatedCheckIn.currentVersion || 1) + 1,
+          snapshotJson: JSON.stringify(updatedCheckIn),
+          changesJson: JSON.stringify(updates), // Track specific changes
+          action: 'update',
+          comment: 'Check-in details updated'
+        });
 
         return updatedCheckIn as CheckIn;
       } catch (error) {

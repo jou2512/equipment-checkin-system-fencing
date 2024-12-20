@@ -1,5 +1,5 @@
 // Auto-generated Appwrite Types
-// Generated on 2024-12-18T16:06:25.553Z
+// Generated on 2024-12-20T11:44:22.338Z
 // WARNING: This file is auto-generated. Do not modify manually.
 
 

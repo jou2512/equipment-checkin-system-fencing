@@ -6,8 +6,7 @@ import { ID, Query } from 'appwrite'
 import { 
   EquipmentType, 
   EquipmentPart, 
-  EquipmentPartDefect, 
-  EquipmentPartCreationForm
+  EquipmentPartDefect,
 } from '@/lib/types/equipment-management'
 import { COLLECTION_IDS, DATABASE_IDS } from '../appwrite/types'
 
@@ -39,7 +38,7 @@ type EquipmentManagementState = {
 
 export const useEquipmentManagementStore = create<EquipmentManagementState>()(
   devtools(
-    (set, get) => ({
+    (set, _get) => ({
       equipmentTypes: [],
       equipmentParts: [],
       equipmentDefects: [],

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { databases } from "@/lib/appwrite/config";
 import { useTournamentStore } from "@/lib/store/tournament-store";
 import { toast } from "./use-toast";
-import { COLLECTION_IDS, DATABASE_IDS, Tournament } from "@/lib/appwrite/types";
+import { COLLECTION_IDS, DATABASE_IDS, Tournament, TournamentActiveWeaponsType } from "@/lib/appwrite/types";
 
 // Hook for managing tournaments
 export function useTournaments() {
@@ -167,6 +167,21 @@ export function useTournaments() {
     };
   }
 
+  const Weapons = (
+    tournament?: Tournament | null
+  ): {
+    hasMultiple: boolean;
+    weapons: TournamentActiveWeaponsType[];
+  } => {
+    const weapons = (tournament?.activeWeapons ||
+      []) as TournamentActiveWeaponsType[];
+
+    return {
+      hasMultiple: weapons.length > 1,
+      weapons,
+    };
+  };
+
   return {
     tournaments,
     isLoading,
@@ -176,5 +191,6 @@ export function useTournaments() {
     deleteTournament,
     getTournament, // Return the single tournament query function
     SelectedTournament, // Return the data and loading of the current tournament
+    Weapons,
   };
 }
