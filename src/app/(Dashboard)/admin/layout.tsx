@@ -40,7 +40,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
             <Suspense fallback={<div>Loading...</div>}>
               <main className="flex-1 overflow-y-auto p-8">{children}</main>
-              <Toaster />
             </Suspense>
           </div>
         </SidebarInset>

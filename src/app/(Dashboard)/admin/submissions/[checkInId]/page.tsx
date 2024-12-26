@@ -23,6 +23,7 @@ import { useParams } from "next/navigation";
 import {
   CheckIn,
   CheckInCheckInStatus,
+  CheckInCheckInStatusType,
   Checkinitem,
   CheckinitemStatus,
   ItemConfig,
@@ -54,13 +55,13 @@ export default function SubmissionDetailsPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedCheckIn, setEditedCheckIn] = useState<CheckInUpdate>({});
 
-  const [showId, setShowId] = useState(false)
+  const [showId, setShowId] = useState(false);
   const toggleShowId = () => setShowId((prev) => !prev);
 
   const { getSubmissions, getSubmissionVersion, compareVersions } =
     useSubmissions();
 
-  const { getCheckIn, updateCheckIn } = useCheckIns();
+  const { getCheckIn, updateCheckIn, updateCheckInStatus } = useCheckIns();
 
   const { SelectedTournament, Weapons } = useTournaments();
   const { tournament: currentTournament, isLoading: isLoadingTournament } =
@@ -191,6 +192,34 @@ export default function SubmissionDetailsPage() {
     const IconComponent = dynamic(dynamicIconImports[iconName]);
   };
 
+  // First, create the update function
+  const handleStatusUpdate = async (newStatus: CheckInCheckInStatusType) => {
+    if (!currentCheckIn?.$id) {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "No check-in selected",
+      });
+      return;
+    }
+
+    try {
+      await updateCheckInStatus.mutateAsync({
+        checkInId: currentCheckIn.$id,
+        status: newStatus,
+      });
+
+      // Refetch after successful update
+      refetchCheckIn();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description:
+          error instanceof Error ? error.message : "Failed to update status",
+      });
+    }
+  };
 
   // Render version differences
   const renderVersionDifferences = () => {
@@ -233,7 +262,6 @@ export default function SubmissionDetailsPage() {
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6">
-      <IconPicker onSelectIcon={handleSelectIcon} />
       <Card>
         <CardHeader>
           <CardTitle>Submission Overview</CardTitle>
@@ -290,12 +318,30 @@ export default function SubmissionDetailsPage() {
             </div>
             <div>
               <p className="text-md text-muted-foreground">Status</p>
-              <Badge
-                variant={currentCheckIn?.CheckInStatus}
-                className="text-md"
+              <Select
+                value={currentCheckIn?.CheckInStatus}
+                onValueChange={handleStatusUpdate}
               >
-                {currentCheckIn?.CheckInStatus}
-              </Badge>
+                <SelectTrigger className="w-auto border-none shadow-none">
+                  <SelectValue>
+                    <Badge
+                      variant={currentCheckIn?.CheckInStatus}
+                      className="text-md mr-3"
+                    >
+                      {currentCheckIn?.CheckInStatus}
+                    </Badge>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(CheckInCheckInStatus).map((status) => (
+                    <SelectItem key={status} value={status}>
+                      <Badge variant={status} className="text-md">
+                        {status}
+                      </Badge>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Submission Date</p>

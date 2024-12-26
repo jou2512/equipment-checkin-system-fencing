@@ -156,6 +156,71 @@ export function useCheckIns() {
     }
   });
 
+  const updateCheckInStatus = useMutation({
+  mutationFn: async ({
+    checkInId,
+    status
+  }: {
+    checkInId: string;
+    status: CheckInCheckInStatusType;
+  }) => {
+    // First get the current check-in to create a snapshot
+    const currentCheckIn = await databases.getDocument(
+      DATABASE_IDS.CHECKING_SYSTEM,
+      COLLECTION_IDS.CHECKINS,
+      checkInId
+    ) as CheckIn;
+
+    // Update the check-in status
+    const updatedCheckIn = await databases.updateDocument(
+      DATABASE_IDS.CHECKING_SYSTEM,
+      COLLECTION_IDS.CHECKINS,
+      checkInId,
+      {
+        CheckInStatus: status,
+        currentVersion: (currentCheckIn.currentVersion || 1) + 1
+      }
+    ) as CheckIn;
+
+    // Create a submission record
+    await databases.createDocument(
+      DATABASE_IDS.CHECKING_SYSTEM,
+      COLLECTION_IDS.SUBMISSIONS,
+      ID.unique(),
+      {
+        checkInDocument: checkInId,
+        checkInKey: checkInId,
+        versionNumber: updatedCheckIn.currentVersion,
+        snapshotJson: "test",
+        changesJson: JSON.stringify({
+          field: 'CheckInStatus',
+          oldValue: currentCheckIn.CheckInStatus,
+          newValue: status
+        }),
+        action: 'update',
+        comment: `Status updated to ${status}`
+      }
+    );
+
+    return updatedCheckIn;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['checkIns'] });
+    toast({
+      className: "bg-green-100",
+      title: "Status Updated",
+      description: "Check-in status has been updated successfully."
+    });
+  },
+  onError: (error) => {
+    toast({
+      variant: "destructive",
+      title: "Update Failed",
+      description: error instanceof Error ? error.message : "Failed to update status"
+    });
+  }
+});
+
   // Update check-in status
   const updateCheckInItemStatus = useMutation({
     mutationFn: async ({
@@ -276,7 +341,7 @@ export function useCheckIns() {
           checkInId,
           {
             ...validatedUpdates,
-            currentVersion: (currentCheckIn.currentVersion || 0) + 1
+            currentVersion: (currentCheckIn.currentVersion || 1) + 1
           }
         );
 
@@ -284,7 +349,7 @@ export function useCheckIns() {
         await createSubmissionVersion.mutateAsync({
           checkInDocument: checkInId,
           checkInKey: checkInId,
-          versionNumber: (updatedCheckIn.currentVersion || 1) + 1,
+          versionNumber: (updatedCheckIn.currentVersion || 1),
           snapshotJson: JSON.stringify(updatedCheckIn),
           changesJson: JSON.stringify(updates), // Track specific changes
           action: 'update',
@@ -391,6 +456,7 @@ export function useCheckIns() {
     getCheckIn,
     createCheckIn,
     updateCheckIn,
+    updateCheckInStatus,
     updateCheckInItemStatus,
     confirmPickup,
     deleteCheckIn,
