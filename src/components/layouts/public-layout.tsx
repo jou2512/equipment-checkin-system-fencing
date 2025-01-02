@@ -1,9 +1,5 @@
-// components/layouts/public-layout.tsx
 "use client";
 
-import { Swords } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { LandingNavBar } from "../navigation/nav-bars/landing/landing-nav-bar";
 
 interface PublicLayoutProps {
@@ -12,11 +8,11 @@ interface PublicLayoutProps {
 
 export function PublicLayout({ children }: PublicLayoutProps) {
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <header>
         <LandingNavBar />
       </header>
-      <main className="pt-14 flex-1">{children}</main>
-    </>
+      <main className="flex-1 pt-16">{children}</main>
+    </div>
   );
 }

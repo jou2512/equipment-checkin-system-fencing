@@ -73,7 +73,7 @@ export default function VerificationPage({
 
         // Redirect to dashboard after a short delay
         setTimeout(() => {
-          router.push("/dashboard");
+          router.push("/profile");
         }, 2000);
       } catch (error) {
         setStatus("error");

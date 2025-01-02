@@ -406,6 +406,7 @@ export const DATABASE_IDS = {
 
 /** Collection identifiers for the project */
 export const COLLECTION_IDS = {
+  TOURNAMENT_CODES: 'tournamentCodes',
   CHECKABLEITEMS: 'checkableItems',
   ITEMCONFIGS: 'itemconfigs',
   EQUIPMENTTYPES: 'equipmentTypes',

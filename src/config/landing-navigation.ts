@@ -11,10 +11,10 @@ export const landingConfig: LandingConfig = {
     title: "Home",
     href: "/",
   },
-  {
-    title: "Documentation",
-    href: "/documentation",
-  },
+  // {
+  //   title: "Documentation",
+  //   href: "/documentation",
+  // },
   {
     title: "About",
     href: "/about",

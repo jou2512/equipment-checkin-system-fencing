@@ -6,9 +6,9 @@ import Link from "next/link";
 export function HeroSection() {
   return (
     <div className="relative overflow-hidden bg-background">
-      <div className="mx-auto max-w-7xl px-6 pb-24 pt-10 sm:pb-32 lg:flex lg:px-8 lg:py-40">
+      <div className="mx-auto max-w-7xl px-6 pb-24 pt-10 sm:pt-10 sm:pb-32 lg:flex lg:px-8 lg:py-40">
         <div className="mx-auto max-w-2xl flex-shrink-0 lg:mx-0 lg:max-w-xl lg:pt-8">
-          <div className="mt-24 sm:mt-32 lg:mt-16">
+          <div className="mt-0 sm:mt-24 lg:mt-16">
             <div className="inline-flex space-x-6">
               <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold leading-6 text-primary ring-1 ring-inset ring-primary/20">
                 Latest Version
@@ -38,12 +38,12 @@ export function HeroSection() {
             </Link>
           </div>
         </div>
-        <div className="mx-auto mt-16 flex max-w-2xl sm:mt-24 lg:ml-10 lg:mr-0 lg:mt-0 lg:max-w-none lg:flex-none xl:ml-32">
-          <div className="max-w-3xl flex-none sm:max-w-5xl lg:max-w-none">
-            <div className="rounded-lg bg-card p-8 shadow-lg">
+        <div className="mx-auto mt-16 max-w-2xl sm:mt-24 lg:ml-10 lg:mr-0 lg:mt-0 lg:max-w-none lg:flex-none xl:ml-32">
+          <div className="max-w-full flex-none sm:max-w-5xl lg:max-w-none">
+            <div className="rounded-lg bg-card p-4 sm:p-8 shadow-lg">
               {/* Placeholder for equipment check illustration or animation */}
-              <div className="h-[350px] w-[550px] flex items-center justify-center">
-                <Swords className="h-32 w-32 text-primary" />
+              <div className="h-[200px] w-[300px] sm:h-[350px] sm:w-[550px] flex items-center justify-center">
+                <Swords className="h-16 w-16 sm:h-32 sm:w-32 text-primary" />
               </div>
             </div>
           </div>

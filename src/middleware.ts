@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { authMiddleware } from '../middleware/auth-middleware';
+import { authMiddleware} from '../middleware/auth-middleware';
 import { headerMiddleware } from '../middleware/header-middleware';
 
 export async function middleware(request: NextRequest) {
@@ -9,12 +9,12 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = headerMiddleware(request);
 
   // Then, check authentication
-  const authResponse = await authMiddleware(request);
+  // const authResponse = await authMiddleware(request);
   
-  // If auth middleware returns a response, use it
-  if (authResponse) {
-    return authResponse;
-  }
+  // // If auth middleware returns a response, use it
+  // if (authResponse) {
+  //   return authResponse;
+  // }
 
   // Otherwise, continue with modified headers
   return NextResponse.next({

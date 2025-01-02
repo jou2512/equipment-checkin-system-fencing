@@ -2,7 +2,7 @@
 import { Metadata } from "next";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { docsConfig } from "@/config/documentation-config";
-import { DocumentationSidebar } from "@/components/navigation/side-bars/dashboard/documentation-sidebar";
+import { DocumentationSidebar } from "@/components/navigation/side-bars/documentation/documentation-sidebar";
 
 export const metadata: Metadata = {
   title: "Documentation",

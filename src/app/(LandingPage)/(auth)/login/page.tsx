@@ -12,13 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Form,
   FormControl,
   FormField,
@@ -26,441 +19,100 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { toast } from "@/hooks/use-toast";
 import {
-  Eye,
-  EyeOff,
-  Github,
-  ChromeIcon as Google,
-  Phone,
-  Mail,
-  Link,
-} from "lucide-react";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { toast } from "@/hooks/use-toast";
+import { ChromeIcon as Google, Info, Phone } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import Link from "next/link";
 
-const defaultSchema = z.object({
-  first_name: z
-    .string()
-    .min(2, { message: "First Name must be at least 2 characters long" }),
-  last_name: z
-    .string()
-    .min(2, { message: "Last Name must be at least 2 characters long" }),
-  role: z.enum(["fencer", "staff", "organizer"], {
-    errorMap: () => ({ message: "Please select a role" }),
-  }),
-});
+// Feature Flags
+const FEATURES = {
+  SMS_LOGIN: false, // Toggle SMS login on/off
+};
 
 // Validation Schemas
-const emailSchema = defaultSchema.extend({
+const passwordLoginSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
-  password: z
-    .string()
-    .min(8, { message: "Password must be at least 8 characters long" }),
-  // .regex(
-  //   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&",.-{}¨]{8,}$/,
-  //   {
-  //     message:
-  //       "Password must contain uppercase, lowercase, number, and special character (@$!%*?&)",
-  //   }
-  // ),
+  password: z.string().min(1, { message: "Password is required" }),
 });
 
-const phoneSchema = defaultSchema.extend({
+const smsLoginSchema = z.object({
   phone: z
     .string()
     .regex(/^\+[1-9]\d{1,14}$/, { message: "Invalid phone number" }),
-  role: z.enum(["fencer", "staff", "organizer"], {
-    errorMap: () => ({ message: "Please select a role" }),
-  }),
 });
 
-const magicLinkSchema = defaultSchema.extend({
-  email: z.string().email({ message: "Invalid email address" }),
-  role: z.enum(["fencer", "staff", "organizer"], {
-    errorMap: () => ({ message: "Please select a role" }),
-  }),
-});
+type PasswordLoginData = z.infer<typeof passwordLoginSchema>;
+type SMSLoginData = z.infer<typeof smsLoginSchema>;
 
-type AuthMethod = "email" | "phone" | "magic-link";
-type EmailData = z.infer<typeof emailSchema>;
-type PhoneData = z.infer<typeof phoneSchema>;
-type MagicLinkData = z.infer<typeof magicLinkSchema>;
-
-export default function AuthenticationPage() {
+export default function LoginPage() {
   const router = useRouter();
-  const [authMethod, setAuthMethod] = useState<AuthMethod>("email");
-  const [showPassword, setShowPassword] = useState(false);
+  const {signIn} = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<"password" | "sms">(
+    "password"
+  );
 
-  // Email Registration Form
-  const emailForm = useForm<EmailData>({
-    resolver: zodResolver(emailSchema),
+  // Password Login Form
+  const passwordForm = useForm<PasswordLoginData>({
+    resolver: zodResolver(passwordLoginSchema),
     defaultValues: {
       email: "",
       password: "",
-      last_name: "",
-      first_name: "",
-      role: "fencer",
     },
   });
 
-  // Phone Registration Form
-  const phoneForm = useForm<PhoneData>({
-    resolver: zodResolver(phoneSchema),
+  // SMS Login Form
+  const smsForm = useForm<SMSLoginData>({
+    resolver: zodResolver(smsLoginSchema),
     defaultValues: {
       phone: "",
-      last_name: "",
-      first_name: "",
-      role: "fencer",
     },
   });
 
-  // Magic Link Form
-  const magicLinkForm = useForm<MagicLinkData>({
-    resolver: zodResolver(magicLinkSchema),
-    defaultValues: {
-      email: "",
-      last_name: "",
-      first_name: "",
-      role: "fencer",
-    },
-  });
-
-  const handleEmailRegistration = async (data: EmailData) => {
+  const handlePasswordLogin = async (data: PasswordLoginData) => {
+    setIsLoading(true);
     try {
-      const result = await account.deleteSessions();
-      console.log(result);
-
-      const user = await account.create(
-        ID.unique(),
-        data.email,
-        data.password,
-        data.first_name + data.last_name
-      );
-
-      console.log(user);
-      await account.createEmailPasswordSession(data.email, data.password);
-      console.log("is done");
-
-      const promise = account.createVerification(
-        "http://localhost:3000/verify/email"
-      );
-      promise.then(
-        function (response) {
-          toast({
-            title: "Registration Successful",
-            description: "Welcome to the platform!",
-          });
-        },
-        function (error) {
-          console.log(error); // Failure
-        }
-      );
+      signIn.mutate(data);
     } catch (error) {
-      console.log(error.message);
       toast({
-        title: "Registration Failed",
+        title: "Login Failed",
         description:
           error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handlePhoneRegistration = async (data: PhoneData) => {
+  const handleSMSLogin = async (data: SMSLoginData) => {
+    setIsLoading(true);
     try {
+      // Create phone token
       const token = await account.createPhoneToken(ID.unique(), data.phone);
 
       toast({
-        title: "SMS Verification Sent",
+        title: "Verification Sent",
         description: "Check your phone for the verification code",
       });
 
-      // TODO: Implement phone verification flow
+      // Redirect to SMS verification page
       router.push(`/verify/phone?userId=${token.userId}`);
     } catch (error) {
       toast({
-        title: "Phone Registration Failed",
+        title: "SMS Login Failed",
         description:
           error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
-    }
-  };
-
-  const handleMagicLinkRegistration = async (data: MagicLinkData) => {
-    try {
-      const token = await account.createMagicURLToken(
-        ID.unique(),
-        data.email,
-        `${window.location.origin}/verify/magic-link`
-      );
-
-      toast({
-        title: "Magic Link Sent",
-        description: "Check your email for the login link",
-      });
-    } catch (error) {
-      toast({
-        title: "Magic Link Registration Failed",
-        description:
-          error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const renderAuthMethodForm = () => {
-    switch (authMethod) {
-      case "email":
-        return (
-          <Form {...emailForm}>
-            <form
-              onSubmit={emailForm.handleSubmit(handleEmailRegistration)}
-              className="space-y-4"
-            >
-              <div className="flex flex-row justify-between">
-                <FormField
-                  control={emailForm.control}
-                  name="first_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>First Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your First Name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={emailForm.control}
-                  name="last_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your Last Name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={emailForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter your email" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={emailForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Enter your password"
-                          {...field}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={emailForm.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="fencer">Fencer</SelectItem>
-                        <SelectItem value="staff">Staff/Team Member</SelectItem>
-                        <SelectItem value="organizer">
-                          Tournament Organizer
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full">
-                Register
-              </Button>
-            </form>
-          </Form>
-        );
-      case "phone":
-        return (
-          <Form {...phoneForm}>
-            <form
-              onSubmit={phoneForm.handleSubmit(handlePhoneRegistration)}
-              className="space-y-4"
-            >
-              <div className="flex flex-row justify-between">
-                <FormField
-                  control={phoneForm.control}
-                  name="first_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>First Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your First Name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={phoneForm.control}
-                  name="last_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your Last Name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={phoneForm.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="+1234567890" {...field} type="tel" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={phoneForm.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="fencer">Fencer</SelectItem>
-                        <SelectItem value="staff">Staff/Team Member</SelectItem>
-                        <SelectItem value="organizer">
-                          Tournament Organizer
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full">
-                Send Verification
-              </Button>
-            </form>
-          </Form>
-        );
-      case "magic-link":
-        return (
-          <Form {...magicLinkForm}>
-            <form
-              onSubmit={magicLinkForm.handleSubmit(handleMagicLinkRegistration)}
-              className="space-y-4"
-            >
-              <FormField
-                control={magicLinkForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter your email"
-                        {...field}
-                        type="email"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={magicLinkForm.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="fencer">Fencer</SelectItem>
-                        <SelectItem value="staff">Staff/Team Member</SelectItem>
-                        <SelectItem value="organizer">
-                          Tournament Organizer
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full">
-                Send Magic Link
-              </Button>
-            </form>
-          </Form>
-        );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -468,39 +120,160 @@ export default function AuthenticationPage() {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
-          Create an Account
+          Login to Your Account
         </h1>
         <Card>
           <CardContent className="pt-6">
-            <div className="flex justify-center mb-4">
-              <div className="flex space-x-2 bg-muted rounded-lg p-1">
-                <Button
-                  variant={authMethod === "email" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setAuthMethod("email")}
-                >
-                  <Mail className="mr-2 h-4 w-4" /> Email
-                </Button>
-                <Button
-                  variant={authMethod === "phone" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setAuthMethod("phone")}
-                >
-                  <Phone className="mr-2 h-4 w-4" /> Phone
-                </Button>
-                <Button
-                  variant={authMethod === "magic-link" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setAuthMethod("magic-link")}
-                >
-                  <Link className="mr-2 h-4 w-4" /> Magic Link
-                </Button>
+            {/* SMS Login Toggle (conditionally rendered) */}
+            {FEATURES.SMS_LOGIN && (
+              <div className="flex justify-center mb-4">
+                <div className="flex space-x-2 bg-muted rounded-lg p-1">
+                  <Button
+                    variant={loginMethod === "password" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setLoginMethod("password")}
+                  >
+                    Password Login
+                  </Button>
+                  <Button
+                    variant={loginMethod === "sms" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setLoginMethod("sms")}
+                  >
+                    <Phone className="mr-2 h-4 w-4" /> SMS Login
+                  </Button>
+                </div>
               </div>
-            </div>
-            {renderAuthMethodForm()}
+            )}
+
+            {/* Password Login Form */}
+            {loginMethod === "password" && (
+              <Form {...passwordForm}>
+                <form
+                  onSubmit={passwordForm.handleSubmit(handlePasswordLogin)}
+                  className="space-y-4"
+                >
+                  <FormField
+                    control={passwordForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Email *
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="inline-block ml-2 h-4 w-4 text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Enter the email used during registration
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter email"
+                            type="email"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={passwordForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Password *
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="inline-block ml-2 h-4 w-4 text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Enter your account password
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            placeholder="Enter password"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Logging in..." : "Login"}
+                  </Button>
+                </form>
+              </Form>
+            )}
+
+            {/* SMS Login Form */}
+            {FEATURES.SMS_LOGIN && loginMethod === "sms" && (
+              <Form {...smsForm}>
+                <form
+                  onSubmit={smsForm.handleSubmit(handleSMSLogin)}
+                  className="space-y-4"
+                >
+                  <FormField
+                    control={smsForm.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Phone Number *
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="inline-block ml-2 h-4 w-4 text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Enter your phone number with country code
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="+1234567890"
+                            type="tel"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading
+                      ? "Sending Verification..."
+                      : "Send Verification"}
+                  </Button>
+                </form>
+              </Form>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <div className="relative w-full">
+            <div className="flex flex-row text-sm space-x-2">
+              <p>No account yet? </p>
+              <Link href="/registration" className=" underline">
+                 SignUp
+              </Link>
+            </div>
+            {/* <div className="relative w-full">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
               </div>
@@ -510,16 +283,10 @@ export default function AuthenticationPage() {
                 </span>
               </div>
             </div>
-            <div className="flex space-x-4">
-              <Button variant="outline" className="w-full">
-                <Github className="mr-2 h-4 w-4" />
-                GitHub
-              </Button>
-              <Button variant="outline" className="w-full">
-                <Google className="mr-2 h-4 w-4" />
-                Google
-              </Button>
-            </div>
+            <Button variant="outline" className="w-full">
+              <Google className="mr-2 h-4 w-4" />
+              Google
+            </Button> */}
           </CardFooter>
         </Card>
       </div>

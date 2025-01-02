@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { databases } from "@/lib/appwrite/config";
+import { account, databases, teams } from "@/lib/appwrite/config";
 import { useTournamentStore } from "@/lib/store/tournament-store";
 import { toast } from "./use-toast";
 import { COLLECTION_IDS, DATABASE_IDS, Tournament, TournamentActiveWeaponsType } from "@/lib/appwrite/types";
+import { RoleType } from "./use-permissions";
 
 // Hook for managing tournaments
 export function useTournaments() {
@@ -41,38 +42,103 @@ export function useTournaments() {
       staleTime: Infinity, // Cache result until explicitly invalidated
     });
 
-  // Add a tournament
-  const addTournament =
-    useMutation({
-      mutationFn: async (tournament: Tournament) => {
-        return await databases.createDocument(
+  // Tournament creation mutation
+  const addTournament = useMutation({
+    mutationFn: async (tournament: Tournament) => {
+      // Generate a consistent ID for both tournament and team
+      console.log(tournament.name)
+      const tournamentId = tournament.name
+        .trim()
+        .toLowerCase()
+        .replace(/ /g, "-");
+      console.log(tournamentId)
+      try {
+        // Create the tournament document first
+        const createdTournament = await databases.createDocument(
           DATABASE_IDS.CHECKING_SYSTEM,
           COLLECTION_IDS.TOURNAMENTS,
-          tournament.name.trim().toLowerCase().replace(/ /g, "-"),
+          tournamentId,
           tournament
         );
-      },
+      console.log(createdTournament);
 
-      onSuccess: (data) => {
-        queryClient.invalidateQueries({
-          queryKey: ["tournaments"],
-        });
-        toast({
-          className: "bg-green-100",
-          title: "Tournament Created",
-          description: `Tournament has been successfully created.`,
-        });
-      },
-      onError: (error) => {
-        toast({
-          variant: "destructive",
-          title: "Failed to add tournament",
-          description:
-            error instanceof Error ? error.message : "Operation failed",
-        });
-        console.error("Failed to add tournament:", error);
-      },
-    });
+        // Create the corresponding team
+        const team = await teams.create(
+          tournamentId, // Team ID matches tournament ID
+          tournament.name
+        );
+      console.log(team);
+
+        // Get current user (creator) details
+        const currentUser = await account.get();
+      console.log(currentUser);
+
+        // Create membership for the creator with tournament-admin role
+        console.log(team.$id, currentUser.email, currentUser.name);
+        await teams.createMembership(
+          team.$id,
+          ["tournament-admin"] as RoleType[],
+          currentUser.email,
+          currentUser.$id,
+          currentUser.phone || undefined,
+          undefined,
+          `${currentUser.name || "Tournament"} Admin`
+        );
+
+        // Return both tournament and team info
+        return {
+          tournament: createdTournament,
+          team,
+        };
+      } catch (error) {
+        // If any step fails, attempt cleanup
+        try {
+          // Try to delete tournament if it was created
+          await databases.deleteDocument(
+            DATABASE_IDS.CHECKING_SYSTEM,
+            COLLECTION_IDS.TOURNAMENTS,
+            tournamentId
+          );
+        } catch {} // Ignore cleanup errors
+
+        try {
+          // Try to delete team if it was created
+          await teams.delete(tournamentId);
+        } catch {} // Ignore cleanup errors
+
+        // Re-throw the original error
+        throw error;
+      }
+    },
+
+    onSuccess: (data) => {
+      // Invalidate both tournaments and teams queries
+      queryClient.invalidateQueries({
+        queryKey: ["tournaments"],
+      });
+
+      toast({
+        className: "bg-green-100",
+        title: "Tournament Created",
+        description: "Tournament and team have been successfully created.",
+      });
+
+      // Return the created tournament ID for potential redirection
+      return data.tournament.$id;
+    },
+
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to Create Tournament",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to create tournament and team structure. Please try again.",
+      });
+      console.error("Tournament creation failed:", error);
+    },
+  });
 
   const updateTournament = useMutation({
     mutationFn: async ({
@@ -112,42 +178,44 @@ export function useTournaments() {
     },
   });
 
-
   // Remove a tournament
-  const deleteTournament =
-    useMutation({
-      mutationFn: async (tournamentId: string) => {
-        await databases.deleteDocument(
-          DATABASE_IDS.CHECKING_SYSTEM,
-          COLLECTION_IDS.TOURNAMENTS,
-          tournamentId
-        );
-      },
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: ["tournaments"],
-        });
-        toast({
-          className: "bg-green-100",
-          title: "Tournament Deleted",
-          description: `The Tournament has been successfully deleted.`,
-        });
-      },
-      onError: (error) => {
-        toast({
-          variant: "destructive",
-          title: "Failed to Delete the tournament.",
-          description:
-            error instanceof Error ? error.message : "Operation failed",
-        });
-        console.error("Failed to Delete tournament:", error);
-      },
-    });
-  
+  const deleteTournament = useMutation({
+    mutationFn: async (tournamentId: string) => {
+      await databases.deleteDocument(
+        DATABASE_IDS.CHECKING_SYSTEM,
+        COLLECTION_IDS.TOURNAMENTS,
+        tournamentId
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["tournaments"],
+      });
+      toast({
+        className: "bg-green-100",
+        title: "Tournament Deleted",
+        description: `The Tournament has been successfully deleted.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to Delete the tournament.",
+        description:
+          error instanceof Error ? error.message : "Operation failed",
+      });
+      console.error("Failed to Delete tournament:", error);
+    },
+  });
+
   const SelectedTournament = () => {
     const { currentTournamentId } = useTournamentStore();
 
-    const { data: data, isLoading, error } = useQuery({
+    const {
+      data: data,
+      isLoading,
+      error,
+    } = useQuery({
       queryKey: ["tournament", currentTournamentId],
       queryFn: async () => {
         if (!currentTournamentId) return null;
@@ -157,15 +225,15 @@ export function useTournaments() {
           currentTournamentId
         );
       },
-      enabled: !!currentTournamentId // Only fetch if an ID is selected
+      enabled: !!currentTournamentId, // Only fetch if an ID is selected
     });
-    const tournament = data ? data as Tournament : null
+    const tournament = data ? (data as Tournament) : null;
     return {
       tournament,
       isLoading,
       error,
     };
-  }
+  };
 
   const Weapons = (
     tournament?: Tournament | null

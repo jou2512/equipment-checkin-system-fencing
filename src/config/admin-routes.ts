@@ -9,7 +9,8 @@ import {
   Send,
   FileCog,
   List,
-  Tag} from "lucide-react";
+  Tag,
+  FileKey} from "lucide-react";
 
 export const ADMIN_ROUTES: AdminRouteGroup[] = [
   {
@@ -50,6 +51,11 @@ export const ADMIN_ROUTES: AdminRouteGroup[] = [
         title: "Status Display",
         url: "/admin/status-display",
         icon: Projector
+      },
+      {
+        title: "Permissions",
+        url: "/admin/permissions",
+        icon: FileKey 
       }
     ]
   },
