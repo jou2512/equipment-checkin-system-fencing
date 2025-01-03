@@ -125,29 +125,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, isLoading, error } = useAuth();
 
   const isAdminRoute = pathname?.startsWith("/admin");
-
-  // Authentication check
-  useEffect(() => {
-    if (!isLoading && !user) {
-      toast({
-        variant: "destructive",
-        title: "Authentication Required",
-        description: "Please sign in to continue",
-      });
-      router.push("/login");
-      return;
-    }
-
-    // Check admin access for admin routes
-    if (!isLoading && isAdminRoute && user && !user.labels.includes("admin")) {
-      toast({
-        variant: "destructive",
-        title: "Unauthorized",
-        description: "You don't have permission to access this area",
-      });
-      router.push("/profile");
-    }
-  }, [user, isLoading, router, toast, isAdminRoute]);
+  const isOpenRoute = pathname?.startsWith("/public_");
 
   // Handle loading state
   if (isLoading) {
@@ -160,9 +138,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   // Handle unauthorized access
-  if (!user || (isAdminRoute && !user.labels.includes("admin"))) {
+  if (
+    (!user ||
+    isAdminRoute && !user.labels.includes("admin")) && !isOpenRoute)
+  {
     router.push("/login");
-    return null
+    return null;
   }
 
   return (
