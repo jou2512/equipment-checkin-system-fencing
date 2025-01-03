@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 
-// Navigation configurations remain the same, just reorganized for visual clarity
+// Navigation configurations remain the same
 const NAVIGATION_CONFIG = {
   public: [
     {
@@ -140,9 +140,12 @@ export function MobileNavigation() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname() ?? "";
   const params = useParams();
-  const { user, isLoading, signOut } = useAuth();
+  const isPublicRoute = pathname.startsWith("/public_");
+  const { user, isLoading, signOut } = !isPublicRoute
+    ? useAuth()
+    : { user: null, isLoading: false, signOut: null };
 
-  // Scroll to active item on mount and route change
+  // Scroll effect remains the same
   useEffect(() => {
     if (scrollRef.current) {
       const activeItem = scrollRef.current.querySelector(
@@ -160,11 +163,14 @@ export function MobileNavigation() {
     }
   }, [pathname]);
 
-  // Determine route type and role with type safety
+  // Fixed route type detection
   const getRouteTypeAndRole = () => {
-    if (pathname.startsWith("/public_"))
-      if (pathname.startsWith("/admin"))
-        return { type: "admin" as const, role: null };
+    if (pathname.startsWith("/public_")) {
+      return { type: "public" as const, role: null };
+    }
+    if (pathname.startsWith("/admin")) {
+      return { type: "admin" as const, role: null };
+    }
     if (pathname.startsWith("/tournament")) {
       const role = (params?.role as string) ?? "participant";
       return { type: "tournament" as const, role };
@@ -176,7 +182,7 @@ export function MobileNavigation() {
 
   if (routeType === "admin") return null;
 
-  if (isLoading) {
+  if (!isPublicRoute && isLoading) {
     return (
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t z-50">
         <div className="flex justify-around items-center h-16 px-2">
@@ -196,11 +202,16 @@ export function MobileNavigation() {
         NAVIGATION_CONFIG[routeType].participant
       : NAVIGATION_CONFIG[routeType] ?? [];
 
-  const visibleItems = navItems.filter(
-    (item) => !item.requireAuth || (item.requireAuth && user)
-  );
+  const visibleItems = isPublicRoute
+    ? navItems // Show all items for public routes
+    : navItems.filter(
+        (item) => !item.requireAuth || (item.requireAuth && user)
+      );
 
   const getCurrentPath = (itemHref: string) => {
+    if (routeType === "public") {
+      return `/public_${itemHref}`;
+    }
     if (!params?.tournamentId || !params?.role) return itemHref;
     return `/tournament/${params.tournamentId}/${params.role}/${itemHref}`;
   };
@@ -230,17 +241,17 @@ export function MobileNavigation() {
               </div>
             );
           })}
-          {user && (
+          {!isPublicRoute && user && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => signOut.mutate()}
-              disabled={signOut.isPending}
+              onClick={() => signOut?.mutate()}
+              disabled={signOut?.isPending}
               className="flex flex-col items-center p-2 h-auto min-w-[72px] text-muted-foreground hover:text-primary"
             >
               <LogOut className="h-5 w-5" />
               <span className="text-xs mt-1 whitespace-nowrap">
-                {signOut.isPending ? "Signing out..." : "Sign out"}
+                {signOut?.isPending ? "Signing out..." : "Sign out"}
               </span>
             </Button>
           )}
