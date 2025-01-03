@@ -10,7 +10,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { client } from "@/lib/hono/hono-client";
+import { teams, users } from "@/lib/appwrite/config";
 import { Models } from "node-appwrite";
 
 type FencerSearchProps = {
@@ -28,18 +28,20 @@ export function FencerSearch({ tournamentId, onSelect }: FencerSearchProps) {
   useEffect(() => {
     const fetchFencers = async () => {
       try {
-        // Fetch tournament admins using Hono endpoint
-        const response = await client.api.teams.adminMembers.$post({
-          json: { teamId: tournamentId },
-        });
+        const response = await teams.listMemberships(tournamentId);
+        const memberships = response.memberships ?? [];
+        const filteredResponses = memberships.filter((item) =>
+          item.roles.includes("tournament-admin")
+        );
 
-        const data = await response.json();
-        if (!data.success) {
-          // @ts-expect-error
-          throw new Error(data.error || "Failed to fetch fencers");
-        }
-          // @ts-expect-error
-        setFencers(data.fencers);
+        const fencerDetailsPromises = filteredResponses.map(
+          async (membership) => {
+            return await users.get(membership.userId);
+          }
+        );
+
+        const fencerDetails = await Promise.all(fencerDetailsPromises);
+        setFencers(fencerDetails);
       } catch (error) {
         console.error("Error fetching fencers:", error);
       }
@@ -90,8 +92,7 @@ export function FencerSearch({ tournamentId, onSelect }: FencerSearchProps) {
                       : "opacity-0"
                   )}
                 />
-                {fencer.name} (
-                {(fencer.prefs.nationalityCode as string).toUpperCase()})
+                {fencer.name} ({(fencer.prefs.nationalityCode as string).toUpperCase()})
               </div>
             ))}
         </div>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { account } from "@/lib/appwrite/config";
+import { account, users } from "@/lib/appwrite/config";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
-import { client } from "@/lib/hono/hono-client";
 
 // Validation Schemas for Different Roles
 const fencerSchema = z.object({
@@ -130,19 +129,7 @@ export default function OnboardingPage() {
 
         const user = await account.get();
 
-        // Update user labels using Hono client
-        const response = await client.api.users.setUserRole.$post({
-          json: {
-            userId: user.$id,
-            role: role as string,
-          },
-        });
-
-        const result = await response.json();
-        if (!result.success) {
-          // @ts-expect-error
-          throw new Error(result.error || "Failed to update user role");
-        }
+        await users.updateLabels(user.$id, [role as string]);
 
         toast({
           title: "Profile Updated",

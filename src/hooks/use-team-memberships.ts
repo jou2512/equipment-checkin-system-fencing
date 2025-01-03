@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { account } from '@/lib/appwrite/config';
+import { account, teams, users } from '@/lib/appwrite/config';
 import { useTournaments } from '@/hooks/use-tournaments';
 import { toast } from '@/hooks/use-toast';
 import { 
@@ -10,7 +10,6 @@ import {
 } from '@/lib/appwrite/types';
 import { Models } from 'appwrite';
 import { useRouter } from 'next/navigation';
-import { client } from '@/lib/hono/hono-client';
 
 // Invite Code Utilities
 import { 
@@ -20,6 +19,9 @@ import {
 } from '@/lib/utils/invite-code-utils';
 import { useCheckIns } from './use-checkIn';
 
+/**
+ * Represents an enriched team membership with tournament and check-in details
+ */
 export interface EnrichedTeamMembership {
   $id: string;
   teamId: string;
@@ -34,12 +36,19 @@ export interface EnrichedTeamMembership {
   pastCheckIns: CheckIn[];
 }
 
+/**
+ * Hook to manage team memberships with advanced functionality
+ * @returns Object containing team memberships methods and data
+ */
 export function useTeamMemberships() {
   const queryClient = useQueryClient();
   const router = useRouter();
+
+  // Fetch check-ins and tournaments to enrich membership data
   const { checkIns } = useCheckIns();
   const { tournaments } = useTournaments();
 
+  // Fetch team memberships
   const {
     data: rawMemberships,
     isLoading,
@@ -50,20 +59,13 @@ export function useTeamMemberships() {
     queryKey: ['teamMemberships'],
     queryFn: async () => {
       try {
+        // Get current user
         const user = await account.get();
         
-        // Use Hono endpoint to get memberships
-        const response = await client.api.users.memberships.$post({
-          json: { userId: user.$id }
-        });
+        // Fetch team memberships for the user
+        const membershipResponse = await users.listMemberships(user.$id);
         
-        const data = await response.json();
-        if (!data.success) {
-          // @ts-expect-error
-          throw new Error(data.error || 'Failed to fetch memberships');
-        }
-        // @ts-expect-error
-        return data.memberships;
+        return membershipResponse.memberships;
       } catch (fetchError) {
         console.error('Failed to fetch team memberships', fetchError);
         throw fetchError;
@@ -73,12 +75,17 @@ export function useTeamMemberships() {
     staleTime: 5 * 60 * 1000 // 5 minutes
   });
 
-  // Enrich memberships logic remains the same
+  // Enrich memberships with tournament and check-in data
   const enrichedMemberships = useMemo<EnrichedTeamMembership[]>(() => {
     if (!rawMemberships) return [];
     
     return rawMemberships.map(membership => {
-      const tournament = tournaments.find(t => t.$id === membership.teamId);
+      // Find corresponding tournament (team ID === tournament ID)
+      const tournament = tournaments.find(
+        t => t.$id === membership.teamId
+      );
+
+      // Find associated check-ins
       const tournamentCheckIns = checkIns.filter(
         checkIn => checkIn.tournaments === membership.teamId
       );
@@ -103,6 +110,13 @@ export function useTeamMemberships() {
     });
   }, [rawMemberships, tournaments, checkIns]);
 
+  /**
+   * Generate an invitation code for a specific tournament and role
+   * @param tournamentId Tournament unique identifier
+   * @param role User role in the tournament
+   * @param metadata Optional additional metadata
+   * @returns Invite code string
+   */
   const generateTournamentInvite = (
     tournamentId: string, 
     role: string = 'participant',
@@ -116,31 +130,38 @@ export function useTeamMemberships() {
     });
   };
 
+  /**
+   * Mutation to join a tournament using an invitation code
+   */
   const joinTournamentByCode = useMutation({
     mutationFn: async (invitationCode: string) => {
       try {
+        // Verify and decode the invite code
         const { tournamentId, role } = decodeInviteCode(invitationCode);
+
+        // Get current user
         const user = await account.get();
 
-        // Use Hono endpoint to join tournament
-        const response = await client.api.teams.join.$post({
-          json: {
-            tournamentId,
-            role,
-            userEmail: user.email,
-            userId: user.$id,
-            userName: user.name
-          }
-        });
-
-        const data = await response.json();
-        if (!data.success) {
-          // @ts-expect-error
-          throw new Error(data.error || 'Failed to join tournament');
+        // Create team (if not exists)
+        let team;
+        try {
+          team = await teams.get(tournamentId);
+        } catch {
+          // Team doesn't exist, create it
+          team = await teams.create(tournamentId, tournamentId);
         }
 
+        // Create membership
+        const membership = await teams.createMembership(
+          tournamentId,
+          [role],
+          user.email
+        );
+
+        // Invalidate and refetch memberships
         await queryClient.invalidateQueries({ queryKey: ['teamMemberships'] });
-        return data;
+
+        return { team, membership };
       } catch (error) {
         console.error('Tournament join failed', error);
         throw error;
@@ -152,6 +173,8 @@ export function useTeamMemberships() {
         description: 'You have successfully joined the tournament.',
         className: 'bg-green-100'
       });
+      
+      // Redirect to profile
       router.push('/profile');
     },
     onError: (error) => {
@@ -165,40 +188,43 @@ export function useTeamMemberships() {
     }
   });
 
-  const getTournamentPrefs = useMutation({
-    mutationFn: async (tournamentId: string) => {
-      const response = await client.api.teams.prefs.$post({
-        json: { teamId: tournamentId }
-      });
-      
-      const data = await response.json();
-      if (!data.success) {
-        // @ts-expect-error
-        throw new Error(data.error || 'Failed to fetch preferences');
-      }
-      // @ts-expect-error
-      return data.preferences;
-    },
-    onSuccess: (data) => {
-      console.log('Tournament preferences fetched successfully:', data);
-    },
-    onError: (error) => {
-      console.error('Failed to fetch tournament preferences:', error);
-    },
-  });
-
-  // Helper functions remain the same
+  /**
+   * Check if a user is already a member of a specific tournament
+   * @param tournamentId - ID of the tournament to check
+   * @returns Boolean indicating membership status
+   */
   const isMemberOfTournament = (tournamentId: string): boolean => {
     return enrichedMemberships.some(
       membership => membership.teamId === tournamentId
     );
   };
 
+  /**
+   * Get a specific tournament membership
+   * @param tournamentId - ID of the tournament
+   * @returns Enriched membership or undefined
+   */
   const getTournamentMembership = (tournamentId: string): EnrichedTeamMembership | undefined => {
     return enrichedMemberships.find(
       membership => membership.teamId === tournamentId
     );
   };
+
+  const getTournamentPrefs = useMutation({
+    mutationFn: async (tournamentId: string) => {
+      const tournamentPrefs = await teams.getPrefs(tournamentId);
+      return tournamentPrefs;
+    },
+    onSuccess: (data) => {
+      console.log('Tournament preferences fetched successfully:', data);
+      // Additional logic here, if needed
+    },
+    onError: (error) => {
+      console.error('Failed to fetch tournament preferences:', error);
+      // Handle error here, such as showing a toast notification
+    },
+    }
+  );
 
   return {
     memberships: enrichedMemberships,
@@ -215,3 +241,4 @@ export function useTeamMemberships() {
     getTournamentPrefs
   };
 }
+
