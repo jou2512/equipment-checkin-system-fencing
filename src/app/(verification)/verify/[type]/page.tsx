@@ -40,8 +40,8 @@ export default function VerificationPage({
         const verifiedType = validateVerificationType(resolvedParams.type);
         setVerificationType(verifiedType);
 
-        const userId = searchParams.get("userId");
-        const secret = searchParams.get("secret");
+        const userId = searchParams?.get("userId");
+        const secret = searchParams?.get("secret");
 
         if (!userId || !secret) {
           throw new Error("Missing verification parameters");

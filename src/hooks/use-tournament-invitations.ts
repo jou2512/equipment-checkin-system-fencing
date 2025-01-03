@@ -33,7 +33,8 @@ interface TournamentCodeEntry {
   tournamentId: string;
   role: TournamentRoleType;
   name: string;
-  active: boolean;
+  description?: string;
+  active?: boolean;
   expiresAt?: string;
 }
 
@@ -131,8 +132,12 @@ export function useTournamentInvites() {
       
       // Transform response to match previous structure
       const role_codes = {
-        "checkin-staff": response.documents.find((doc: TournamentCodeEntry) => doc.role === 'checkin-staff')?.code,
-        "participant": response.documents.find((doc: TournamentCodeEntry) => doc.role === 'participant')?.code
+        "checkin-staff": response.documents.find(
+          (doc: any) => (doc as TournamentCodeEntry).role === 'checkin-staff'
+        )?.code,
+        "participant": response.documents.find(
+          (doc: any) => (doc as TournamentCodeEntry).role === 'participant'
+        )?.code
       };
 
       return role_codes || {};

@@ -80,7 +80,7 @@ export default function StatusCheckPage() {
       return await databases.updateDocument(
         DATABASE_IDS.CHECKING_SYSTEM,
         COLLECTION_IDS.CHECKINS,
-        selectedCheckIn.$id,
+        selectedCheckIn.$id as string,
         updates
       );
     },
@@ -117,8 +117,10 @@ export default function StatusCheckPage() {
     status: CheckinitemStatus
   ) => {
     if (!selectedCheckIn) return;
-    const updatedItemChecks = selectedCheckIn.itemChecks.map((item) =>
-      item.$id === itemId ? { ...item, status } : item
+    const updatedItemChecks = selectedCheckIn.itemChecks?.map((item) =>
+      (item as Checkinitem).$id === itemId
+        ? { ...(item as Checkinitem), status }
+        : item
     );
     updateCheckInMutation.mutate({ itemChecks: updatedItemChecks });
   };
@@ -130,8 +132,8 @@ export default function StatusCheckPage() {
 
   const handleStartReview = () => {
     if (!selectedCheckIn) return;
-    const updatedItemChecks = selectedCheckIn.itemChecks.map((item) => ({
-      ...item,
+    const updatedItemChecks = selectedCheckIn.itemChecks?.map((item) => ({
+      ...(item as Checkinitem),
       status: "in_review" as CheckinitemStatus,
     }));
     updateCheckInMutation.mutate({
@@ -144,18 +146,18 @@ export default function StatusCheckPage() {
     if (!selectedCheckIn) return;
 
     // Filter out items that are in_review
-    const relevantItems = selectedCheckIn.itemChecks.filter(
-      (item) => item.status !== "in_review"
+    const relevantItems = selectedCheckIn.itemChecks?.filter(
+      (item) => (item as Checkinitem).status !== "in_review"
     );
 
     // Check if all relevant items are approved
-    const allItemsApproved = relevantItems.every(
-      (item) => item.status === "approved"
+    const allItemsApproved = relevantItems?.every(
+      (item) => (item as Checkinitem).status === "approved"
     );
 
     // Check if any of the relevant items are rejected
-    const someItemsRejected = relevantItems.some(
-      (item) => item.status === "rejected"
+    const someItemsRejected = relevantItems?.some(
+      (item) => (item as Checkinitem).status === "rejected"
     );
 
     let newStatus: CheckInCheckInStatus;
@@ -251,7 +253,7 @@ export default function StatusCheckPage() {
                     value={item.status}
                     onValueChange={(value) =>
                       handleItemStatusChange(
-                        item.$id,
+                        (item as Checkinitem).$id as string,
                         value as CheckinitemStatus
                       )
                     }

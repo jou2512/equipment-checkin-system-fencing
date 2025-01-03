@@ -47,6 +47,12 @@ type FormValues = z.infer<typeof FormSchema>;
 export default function TournamentJoinForm() {
   const pathname = usePathname();
   const router = useRouter();
+
+  if (!pathname) {
+    router.push("/404")
+    return null
+  }
+
   const { processJoinCode } = useTournamentInvites();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -75,7 +81,7 @@ export default function TournamentJoinForm() {
           className: "bg-green-100",
         });
         router.push(
-          `${pathname.replace(
+          `${pathname?.replace(
             "profile/join",
             `tournament/${result.tournamentId}/${result.role}`
           )}`

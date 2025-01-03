@@ -4,6 +4,7 @@ import { useCheckIns } from "@/hooks/use-checkIn";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {Tournament} from '@/lib/appwrite/types'
 import {
   CheckCircle2,
   XCircle,
@@ -15,12 +16,16 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
-import Link from "next/link";
 
 export default function MyCheckIns() {
   const params = useParams();
   const router = useRouter();
-  const currentTournamentId = params.tournamentId as string;
+  if (!params?.tournamentId) {
+    router.push("/404");
+    return null;
+  }
+
+  const currentTournamentId = params.tournamentId;
   const { checkIns, isLoading } = useCheckIns();
   const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
@@ -29,7 +34,8 @@ export default function MyCheckIns() {
   // Filter check-ins for current tournament
   const relevantCheckIns = checkIns.filter(
     (checkIn) =>
-      checkIn.tournaments?.$id === currentTournamentId &&
+      (checkIn.tournaments as Tournament).$id === currentTournamentId &&
+      // @ts-ignore
       checkIn.fencerID === user?.$id
   );
 
@@ -82,20 +88,30 @@ export default function MyCheckIns() {
             <h2 className="text-2xl font-semibold mb-4">No Check-ins Found</h2>
             <div className="max-w-md space-y-6">
               <p className="text-muted-foreground">
-                You haven't submitted any equipment for checking yet. Here's how to get started:
+                You haven't submitted any equipment for checking yet. Here's how
+                to get started:
               </p>
               <div className="space-y-4">
                 <div className="space-y-2">
                   <h3 className="font-semibold">Step 1: Prepare Your Items</h3>
-                  <p className="text-sm text-muted-foreground">Count all your equipment items that need to be checked.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Count all your equipment items that need to be checked.
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <h3 className="font-semibold">Step 2: Visit the Check-in Counter</h3>
-                  <p className="text-sm text-muted-foreground">Go to the equipment check-in counter and provide your name.</p>
+                  <h3 className="font-semibold">
+                    Step 2: Visit the Check-in Counter
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Go to the equipment check-in counter and provide your name.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <h3 className="font-semibold">Step 3: Track Your Status</h3>
-                  <p className="text-sm text-muted-foreground">Once submitted, you'll be able to track your equipment status here.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Once submitted, you'll be able to track your equipment
+                    status here.
+                  </p>
                 </div>
               </div>
             </div>
@@ -150,7 +166,7 @@ export default function MyCheckIns() {
                               variant={
                                 item.status === "approved"
                                   ? "success"
-                                  : "warning"
+                                  : "destructive"
                               }
                               className="ml-2"
                             >

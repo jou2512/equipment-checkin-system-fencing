@@ -158,8 +158,8 @@ export default function TournamentSetupPage() {
           });
 
           // Set as current tournament if it's the first one
-          if (!currentTournamentId && result.$id) {
-            setCurrentTournamentId(result.$id);
+          if (!currentTournamentId && result.tournament.$id) {
+            setCurrentTournamentId(result.tournament.$id);
           }
 
           toast({

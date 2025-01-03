@@ -176,7 +176,7 @@ export default function MobileStatusDisplay() {
                             ]
                           }
                         >
-                          {submission.CheckInStatus.replace("_", " ")}
+                          {submission.CheckInStatus?.replace("_", " ")}
                         </Badge>
                       </div>
                       <div className="text-sm">
@@ -216,7 +216,7 @@ export default function MobileStatusDisplay() {
                             ]
                           }
                         >
-                          {submission.CheckInStatus.replace("_", " ")}
+                          {submission.CheckInStatus?.replace("_", " ")}
                         </Badge>
                       </div>
                       <div className="text-sm">

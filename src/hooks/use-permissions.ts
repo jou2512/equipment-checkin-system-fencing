@@ -71,6 +71,7 @@ export function usePermissions() {
 
     return membership.roles.some(role => {
       const roleKey = role as RoleType;
+      // @ts-ignore
       return ROLE_PERMISSIONS[roleKey]?.includes(permission);
     });
   }, [membership]);

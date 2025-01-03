@@ -85,6 +85,7 @@ export default function PreRegistrationPage() {
       // Create pre-registration document
       const preRegistration = await databases.createDocument(
         DATABASE_IDS.CHECKING_SYSTEM,
+        // @ts-ignore
         COLLECTION_IDS.PRE_REGISTRATIONS, // Assuming this collection exists
         ID.unique(),
         {

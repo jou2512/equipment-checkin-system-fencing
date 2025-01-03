@@ -1,5 +1,3 @@
-import React from "react";
-
 // pages/unauthorized.tsx
 export default function UnauthorizedPage() {
   return (

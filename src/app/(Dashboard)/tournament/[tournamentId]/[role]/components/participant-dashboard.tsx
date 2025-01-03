@@ -18,22 +18,36 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
 import { useTeamMemberships } from "@/hooks/use-team-memberships";
+import { Tournament } from "@/lib/appwrite/types";
 
 export default function ParticipantDashboard() {
   const params = useParams();
   const router = useRouter();
-  const currentTournamentId = params.tournamentId as string;
+
+  if (!params?.tournamentId) {
+    router.push("/404");
+    return null;
+  }
+
+  const currentTournamentId = params.tournamentId;
+  // Ab hier ist currentTournamentId garantiert ein string
   const { checkIns, isLoading } = useCheckIns();
   const { user } = useAuth();
   const { getTournamentPrefs } = useTeamMemberships();
 
-  const { mutate: fetchTournamentPrefs, data, error, isPending: isLoadingPrefs } = getTournamentPrefs;
-  console.log(data)
+  const {
+    mutate: fetchTournamentPrefs,
+    data,
+    error,
+    isPending: isLoadingPrefs,
+  } = getTournamentPrefs;
+  console.log(data);
 
   // Filter check-ins for current tournament
   const relevantCheckIns = checkIns.filter(
     (checkIn) =>
-      checkIn.tournaments?.$id === currentTournamentId &&
+      (checkIn.tournaments as Tournament).$id === currentTournamentId &&
+      // @ts-ignore
       checkIn.fencerID === user?.$id
   );
 

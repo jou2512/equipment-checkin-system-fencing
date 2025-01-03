@@ -73,8 +73,6 @@ export function useTournaments() {
         const currentUser = await account.get();
       console.log(currentUser);
 
-        // Create membership for the creator with tournament-admin role
-        console.log(team.$id, currentUser.email, currentUser.name);
         await teams.createMembership(
           team.$id,
           ["tournament-admin"] as RoleType[],
@@ -124,7 +122,7 @@ export function useTournaments() {
       });
 
       // Return the created tournament ID for potential redirection
-      return data.tournament.$id;
+      return data;
     },
 
     onError: (error) => {

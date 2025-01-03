@@ -57,12 +57,12 @@ export default function MobileSubmissionDetailsPage() {
   const [editedCheckIn, setEditedCheckIn] = useState<Partial<CheckIn>>({});
 
   const { data: checkIn, isLoading } = useQuery({
-    queryKey: ["checkIn", params.checkInId],
+    queryKey: ["checkIn", params?.checkInId],
     queryFn: async () => {
       const response = await databases.getDocument(
         DATABASE_IDS.CHECKING_SYSTEM,
         COLLECTION_IDS.CHECKINS,
-        params.checkInId
+        params?.checkInId as string
       );
       return response as CheckIn;
     },
@@ -85,12 +85,12 @@ export default function MobileSubmissionDetailsPage() {
       return databases.updateDocument(
         DATABASE_IDS.CHECKING_SYSTEM,
         COLLECTION_IDS.CHECKINS,
-        params.checkInId,
+        params?.checkInId as string,
         updates
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(["checkIn", params.checkInId]);
+      queryClient.invalidateQueries({queryKey: ["checkIn", params?.checkInId]});
       setIsEditing(false);
       toast({
         title: "Check-in Updated",
@@ -119,7 +119,9 @@ export default function MobileSubmissionDetailsPage() {
     setEditedCheckIn((prev) => ({
       ...prev,
       itemChecks: prev.itemChecks?.map((item) =>
-        item.$id === itemId ? { ...item, quantity } : item
+        (item as Checkinitem).$id === itemId
+          ? { ...(item as Checkinitem), quantity }
+          : item
       ),
     }));
   };
@@ -132,6 +134,7 @@ export default function MobileSubmissionDetailsPage() {
     return <div className="p-4 text-center">Submission not found</div>;
   }
 
+  // @ts-ignore
   const isFieldEditable = !checkIn.fencerId;
 
   return (

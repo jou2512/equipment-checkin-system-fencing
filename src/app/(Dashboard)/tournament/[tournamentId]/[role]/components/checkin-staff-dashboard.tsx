@@ -6,16 +6,23 @@ import { useTournamentStore } from "@/lib/store/tournament-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, Clock, Package, Users } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { Tournament } from "@/lib/appwrite/types";
 
 export function CheckinStaffDashboard() {
   const params = useParams();
-  const currentTournamentId = params.tournamentId
+  const router = useRouter();
+  if (!params?.tournamentId) {
+    router.push("/404");
+    return null;
+  }
+
+  const currentTournamentId = params.tournamentId;
   const { checkIns, isLoading } = useCheckIns();
 
   // Filter check-ins for current tournament
   const relevantCheckIns = checkIns.filter(
-    (checkIn) => checkIn.tournaments.$id === currentTournamentId
+    (checkIn) => (checkIn.tournaments as Tournament).$id === currentTournamentId
   );
 
   // Aggregate statistics

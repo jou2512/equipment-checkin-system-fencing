@@ -60,7 +60,7 @@ export default function TournamentSelector() {
   return (
     <div className="flex items-center space-x-2">
       <Select
-        value={currentTournamentId}
+        value={currentTournamentId as string}
         onValueChange={handleTournamentSelect}
       >
         <SelectTrigger className="w-[200px]">
@@ -69,7 +69,7 @@ export default function TournamentSelector() {
         <SelectContent>
           <SelectGroup>
             {tournaments.map((tournament) => (
-              <SelectItem key={tournament.$id} value={tournament.$id}>
+              <SelectItem key={tournament.$id} value={tournament.$id as string}>
                 <div className="flex items-center">
                   <Check
                     className={`mr-2 h-4 w-4 ${

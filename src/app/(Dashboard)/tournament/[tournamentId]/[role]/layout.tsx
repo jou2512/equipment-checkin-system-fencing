@@ -1,7 +1,7 @@
 // src/app/tournament/[tournamentId]/[role]/layout.tsx
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   TOURNAMENT_ROLES,
   TournamentRoleType,
@@ -16,6 +16,13 @@ export default function TournamentLayout({
   children: React.ReactNode;
 }) {
   const params = useParams();
+  const router = useRouter();
+
+  if (!params?.role) {
+    router.push("/404");
+    return null;
+  }
+
   const role = params.role as TournamentRoleType;
 
   // Render different navigation based on role

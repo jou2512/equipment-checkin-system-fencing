@@ -26,7 +26,7 @@ import { toast } from "@/hooks/use-toast";
 import { CheckCircle, Eye } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const STATUS_COLORS = {
   approved: "bg-green-100 text-green-800",
@@ -37,6 +37,11 @@ const STATUS_COLORS = {
 export default function MobilePickupManagementPage() {
   const queryClient = useQueryClient();
   const pathname = usePathname();
+  const router = useRouter();
+  if (!pathname) {
+    router.push("/404");
+    return null;
+  }
   const { currentTournamentId } = useTournamentStore();
   const [selectedSubmission, setSelectedSubmission] = useState<CheckIn | null>(
     null
@@ -133,7 +138,7 @@ export default function MobilePickupManagementPage() {
               <div className="flex justify-between items-center">
                 <div className="text-xs text-gray-500">
                   {format(
-                    new Date(submission.$createdAt),
+                    new Date(submission.$createdAt as string),
                     "MMM dd, yyyy HH:mm"
                   )}
                 </div>

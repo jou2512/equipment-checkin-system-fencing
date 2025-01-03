@@ -42,6 +42,7 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 
 export default function ProfileDashboard() {
   const pathname = usePathname()
+
   // Authentication and Profile Management
   const { 
     user, 
@@ -291,7 +292,7 @@ export default function ProfileDashboard() {
       </Card>
       {/* Join Tournament Button */}
       <Button asChild className="w-full" variant="outline">
-        <Link href={`${pathname.replace("account","")}/join`}>
+        <Link href={`${pathname?.replace("account","")}/join`}>
           <Users className="mr-2 h-4 w-4" />
           Join New Tournament
         </Link>

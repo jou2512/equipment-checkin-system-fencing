@@ -133,10 +133,11 @@ export default function PickupManagementPage() {
       cell: ({ row }) => {
         const status = row.getValue("CheckInStatus");
         return (
-          <span 
+          <span
+            // @ts-ignore
             className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[status]}`}
           >
-            {status.replace('_', ' ')}
+            {(status as string).replace('_', ' ')}
           </span>
         );
       }
@@ -272,7 +273,7 @@ export default function PickupManagementPage() {
               </div>
               <div>
                 <strong>Submitted At:</strong> 
-                {format(new Date(selectedSubmission.$createdAt), 'MMM dd, yyyy HH:mm')}
+                {format(new Date(selectedSubmission.$createdAt as string), 'MMM dd, yyyy HH:mm')}
               </div>
               <Textarea
                 placeholder="Optional pickup notes..."

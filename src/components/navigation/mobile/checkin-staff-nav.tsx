@@ -9,7 +9,10 @@ import { useParams } from "next/navigation";
 export function CheckinStaffNavigation() {
   const [isOpen, setIsOpen] = useState(false);
   const params = useParams();
-  const { tournamentId, role } = params;
+  const { tournamentId, role } = params as {
+    tournamentId: string;
+    role: string;
+  };
 
   const navItems = [
     {

@@ -98,7 +98,7 @@ export function StaffSearchDialog({
               id="checkNumber"
                           className="col-span-3"
                           type="number"
-              onChange={(e) => performSearch({ checkNumber: e.target.value })}
+              onChange={(e) => performSearch({ checkNumber: parseInt(e.target.value) })}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">

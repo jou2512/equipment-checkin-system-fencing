@@ -31,9 +31,7 @@ import { z } from "zod";
 import { Check, QrCode, Search } from "lucide-react";
 import { StaffSearchDialog } from "@/components/tournament/staff-search-dialog";
 import { FencerSearch } from "@/components/tournament/fencer-search";
-import { Models } from "appwrite";
-
-
+import { Models } from "node-appwrite";
 
 // Feature flags at the top of the file for easy modification
 const FEATURES = {
@@ -150,11 +148,11 @@ export default function MobileCheckInPage() {
   const resetForm = () => {
     setCurrentStep(Weapons().hasMultiple ? "weapon" : "details");
     setSelectedWeapon(Weapons().hasMultiple ? null : Weapons().weapons[0]);
-      setFencerNationality("");
-      setFencerName("")
+    setFencerNationality("");
+    setFencerName("");
     setItemQuantities({});
-      setSubmissionData(null);
-      setSelectedFencerId(null);
+    setSubmissionData(null);
+    setSelectedFencerId(null);
   };
 
   // Helper function to check if tournament has multiple weapons
@@ -186,26 +184,25 @@ export default function MobileCheckInPage() {
     setSelectedFencerId(fencer.$id);
     setFencerName(fencer.name || "");
     setFencerNationality(fencer.prefs.nationalityCode.toUpperCase() || "");
-      setSelectedWeapon(fencer.prefs.weapon);
+    setSelectedWeapon(fencer.prefs.weapon);
     setCurrentStep("items");
-      
   };
 
-    const handleSearchResult = (result: any) => {
-      setFencerName(result.fencerName || "");setSelectedFencerId(null);
-      setFencerNationality(result.nationalityCode.toUpperCase() || "");
-      setSelectedWeapon(result.weaponType);
+  const handleSearchResult = (result: any) => {
+    setFencerName(result.fencerName || "");
+    setSelectedFencerId(null);
+    setFencerNationality(result.nationalityCode.toUpperCase() || "");
+    setSelectedWeapon(result.weaponType);
 
-      const quantities = {};
-      result.itemChecks.forEach((item) => {
-        quantities[item.$id] = item.quantity;
-      });
-      setItemQuantities(quantities);
+    const quantities = {};
+    result.itemChecks.forEach((item) => {
+      quantities[item.$id] = item.quantity;
+    });
+    setItemQuantities(quantities);
 
-      setIsSearchDialogOpen(false);
-      setCurrentStep("review");
-    };
-
+    setIsSearchDialogOpen(false);
+    setCurrentStep("review");
+  };
 
   const handleSubmit = async () => {
     if (!currentTournament) {
@@ -233,7 +230,7 @@ export default function MobileCheckInPage() {
         eventKey: currentTournament.name.toLowerCase(),
         CheckInStatus: CheckInCheckInStatus.PENDING,
         pickupConfirmed: false,
-        fencerID: selectedFencerId 
+        fencerID: selectedFencerId,
       };
 
       // First validate required items
@@ -795,7 +792,7 @@ export default function MobileCheckInPage() {
         isOpen={isSearchDialogOpen}
         onClose={() => setIsSearchDialogOpen(false)}
         onSelectResult={handleSearchResult}
-        currentTournamentId={currentTournamentId}
+        currentTournamentId={currentTournamentId as string}
       />
     </div>
   );

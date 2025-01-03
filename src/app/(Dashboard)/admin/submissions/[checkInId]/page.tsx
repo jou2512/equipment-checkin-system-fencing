@@ -73,11 +73,11 @@ export default function SubmissionDetailsPage() {
     data: currentCheckIn,
     isLoading: isCheckInLoading,
     refetch: refetchCheckIn,
-  } = getCheckIn(params.checkInId);
+  } = getCheckIn(params?.checkInId as string);
 
   // Fetch submission versions
   const { data: submissions, isLoading: isSubmissionsLoading } = getSubmissions(
-    params.checkInId
+    params?.checkInId as string
   );
 
   // Initialize editing state when check-in loads
@@ -95,7 +95,7 @@ export default function SubmissionDetailsPage() {
     try {
       console.log(editedCheckIn);
       await updateCheckIn.mutateAsync({
-        checkInId: params.checkInId,
+        checkInId: params?.checkInId as string,
         updates: editedCheckIn,
       });
 

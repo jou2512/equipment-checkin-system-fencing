@@ -1,9 +1,6 @@
 // app/layout.tsx
 import { cn } from "@/lib/utils";
 import { ClientProviders } from "@/providers/client-providers";
-import {
-  ClerkProvider
-} from "@clerk/nextjs";
 import "./globals.css";
 
 // Metadata configuration
@@ -22,18 +19,16 @@ interface RootLayoutProps {
 
 export default async function RootLayout({ children }: RootLayoutProps) {
   return (
-    <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
-        <head />
-        <body
-          className={cn(
-            "min-h-screen bg-background font-sans antialiased",
-            "flex flex-col"
-          )}
-        >
-          <ClientProviders>{children}</ClientProviders>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" suppressHydrationWarning>
+      <head />
+      <body
+        className={cn(
+          "min-h-screen bg-background font-sans antialiased",
+          "flex flex-col"
+        )}
+      >
+        <ClientProviders>{children}</ClientProviders>
+      </body>
+    </html>
   );
 }

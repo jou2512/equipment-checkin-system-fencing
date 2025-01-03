@@ -10,14 +10,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { teams, account, users } from "@/lib/appwrite/config";
-import { Models } from "appwrite";
-
-type Fencer = {
-  $id: string;
-  name: string;
-  nationalityCode: string;
-};
+import { teams, users } from "@/lib/appwrite/config";
+import { Models } from "node-appwrite";
 
 type FencerSearchProps = {
   tournamentId: string;

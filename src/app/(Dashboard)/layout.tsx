@@ -124,7 +124,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { toast } = useToast();
   const { user, isLoading, error } = useAuth();
 
-  const isAdminRoute = pathname.startsWith("/admin");
+  const isAdminRoute = pathname?.startsWith("/admin");
 
   // Authentication check
   useEffect(() => {
@@ -151,7 +151,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Handle loading state
   if (isLoading) {
-    return <DashboardLoadingSkeleton isAdminRoute={isAdminRoute} />;
+    return <DashboardLoadingSkeleton isAdminRoute={isAdminRoute ?? true} />;
   }
 
   // Handle authentication error
