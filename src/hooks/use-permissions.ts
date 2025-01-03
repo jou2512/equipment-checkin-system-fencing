@@ -1,9 +1,9 @@
-// src/hooks/use-permissions.ts
 import { useQuery } from '@tanstack/react-query';
-import { teams, account } from '@/lib/appwrite/config';
+import { account } from '@/lib/appwrite/config';
 import { useTournamentContext } from '@/contexts/tournament-context';
 import { toast } from './use-toast';
 import { useCallback } from 'react';
+import { client } from '@/lib/hono/hono-client';
 
 // Define role permissions structure
 export const ROLE_PERMISSIONS = {
@@ -43,10 +43,21 @@ export function usePermissions() {
       
       try {
         const currentUser = await account.get();
-        const membershipList = await teams.listMemberships(currentTournament.$id);
+        const response = await client.api.teams.memberships.$post({
+          json: {
+            teamId: currentTournament.$id,
+            userId: currentUser.$id
+          }
+        });
         
-        return membershipList.memberships.find(
-          m => m.userId === currentUser.$id
+        const data = await response.json();
+        if (!data.success) {
+           // @ts-expect-error
+          throw new Error(data.error || 'Failed to fetch membership');
+        }
+         // @ts-expect-error
+        return data.memberships.find(
+          (m: any) => m.userId === currentUser.$id
         ) || null;
       } catch (error) {
         console.error('Failed to fetch team membership:', error);
@@ -61,7 +72,17 @@ export function usePermissions() {
     queryKey: ['teamMembers', currentTournament?.$id],
     queryFn: async () => {
       if (!currentTournament?.$id) return [];
-      return await teams.listMemberships(currentTournament.$id);
+      
+      const response = await client.api.teams.listMembers.$post({
+        json: { teamId: currentTournament.$id }
+      });
+      
+      const data = await response.json();
+      if (!data.success) { // @ts-expect-error
+        throw new Error(data.error || 'Failed to fetch team members');
+      }
+       // @ts-expect-error
+      return data.memberships;
     },
     enabled: !!currentTournament?.$id
   });
@@ -70,8 +91,7 @@ export function usePermissions() {
     if (!membership) return false;
 
     return membership.roles.some(role => {
-      const roleKey = role as RoleType;
-      // @ts-ignore
+      const roleKey = role as RoleType; // @ts-expect-error
       return ROLE_PERMISSIONS[roleKey]?.includes(permission);
     });
   }, [membership]);
@@ -93,11 +113,18 @@ export function usePermissions() {
     }
 
     try {
-      await teams.updateMembership(
-        currentTournament.$id,
-        memberId,
-        roles
-      );
+      const response = await client.api.teams.updateMember.$post({
+        json: {
+          teamId: currentTournament.$id,
+          memberId,
+          roles
+        }
+      });
+
+      const data = await response.json();
+      if (!data.success) { // @ts-expect-error
+        throw new Error(data.error || 'Failed to update member roles');
+      }
 
       toast({
         title: 'Roles Updated',
