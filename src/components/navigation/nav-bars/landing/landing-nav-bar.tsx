@@ -13,9 +13,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { useAuth } from "@/hooks/use-auth";
 
 export function LandingNavBar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const {user,} = useAuth()
 
   return (
     <nav className="fixed top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -95,24 +97,35 @@ export function LandingNavBar() {
                   >
                     Documentation
                   </Link> */}
-                  <div className="flex flex-row gap-x-3 w-full justify-around pt-3">
+                  {user ? (
                     <Link
-                      href="/login"
+                      href="/profile"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <Button variant="outline" className="w-full">
-                        Sign In
+                        Go to Profile
                       </Button>
                     </Link>
-                    <Link
-                      href="/registration"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      <Button variant="default" className="w-full">
-                        Sign Up
-                      </Button>
-                    </Link>
-                  </div>
+                  ) : (
+                    <div className="flex flex-row gap-x-3 w-full justify-around pt-3">
+                      <Link
+                        href="/login"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <Button variant="outline" className="w-full">
+                          Sign In
+                        </Button>
+                      </Link>
+                      <Link
+                        href="/registration"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <Button variant="default" className="w-full">
+                          Sign Up
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
                 </nav>
               </SheetContent>
             </Sheet>

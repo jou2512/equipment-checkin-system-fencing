@@ -39,9 +39,7 @@ const fencerSchema = z.object({
   weapon: z.enum(["epee", "foil", "sabre"], {
     errorMap: () => ({ message: "Please select a weapon" }),
   }),
-  phone: z
-    .string()
-    .optional(),
+  phone: z.string().optional(),
   notifications: z.object({
     checkInStatus: z.boolean().default(true),
     pickupReady: z.boolean().default(true),
@@ -132,7 +130,6 @@ export default function OnboardingPage() {
         const user = await account.get();
 
         await users.updateLabels(user.$id, [role as string]);
-        
 
         toast({
           title: "Profile Updated",
@@ -155,6 +152,7 @@ export default function OnboardingPage() {
 
     return (
       <Form {...form}>
+        {/* @ts-ignore */}
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
             control={form.control}

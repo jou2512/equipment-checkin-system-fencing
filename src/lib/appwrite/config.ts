@@ -8,7 +8,6 @@ const client = new Client()
   
 
 export const databases = new Databases(client)
-export const account = new Account(client);
 
 
 
@@ -21,3 +20,5 @@ const sdkclient = new sdk.Client()
 
 export const users = new sdk.Users(sdkclient)
 export const teams = new sdk.Teams(sdkclient);
+export const account = new sdk.Account(sdkclient);
+

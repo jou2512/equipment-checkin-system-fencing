@@ -10,18 +10,12 @@ import { CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
 import { ZodError, z } from "zod";
 import React from "react";
 
-// Define the values once in a constant, using `as const` to make the array a tuple of literals
-const VerificationTypes = ['email', 'magic-link', 'phone'] as const;
-
-// Derive the TypeScript type from the constant (union of the tuple elements)
-type VerificationType = typeof VerificationTypes[number];
-
-// Create the Zod validator from the constant
+const VerificationTypes = ["email", "magic-link", "phone"] as const;
+type VerificationType = (typeof VerificationTypes)[number];
 const VerificationTypeValidator = z.enum(VerificationTypes);
 
-// Function that validates the input and throws an error if the type is incorrect
-const validateVerificationType = (input: unknown) => {
-  return VerificationTypeValidator.parse(input); // This will throw an error if the input is invalid
+const validateVerificationType = (input: unknown): VerificationType => {
+  return VerificationTypeValidator.parse(input);
 };
 
 export default function VerificationPage({
@@ -38,23 +32,14 @@ export default function VerificationPage({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Using React.use() to unwrap the promise
-  const resolvedParams = React.use(params);
+  const resolvedParams = use(params);
 
   useEffect(() => {
     const verifyAccount = async () => {
-      // This will run after the component mounts, making it safe to call hooks
+      try {
+        const verifiedType = validateVerificationType(resolvedParams.type);
+        setVerificationType(verifiedType);
 
-      try {
-        validateVerificationType(resolvedParams.type); // Validate the type
-        setVerificationType(resolvedParams.type as VerificationType);
-        setStatus("success"); // If the validation is successful
-      } catch (error) {
-        console.error((error as ZodError).message); // Handle Zod error
-        setStatus("error");
-      }
-      try {
-        // Determine verification type and method
         const userId = searchParams.get("userId");
         const secret = searchParams.get("secret");
 
@@ -62,7 +47,6 @@ export default function VerificationPage({
           throw new Error("Missing verification parameters");
         }
 
-        // Email Verification
         await account.updateVerification(userId, secret);
 
         setStatus("success");
@@ -71,7 +55,6 @@ export default function VerificationPage({
           description: "Your account has been verified.",
         });
 
-        // Redirect to dashboard after a short delay
         setTimeout(() => {
           router.push("/profile");
         }, 2000);
@@ -119,6 +102,8 @@ export default function VerificationPage({
             <Button onClick={() => router.push("/register")}>Try Again</Button>
           </div>
         );
+      default:
+        return null;
     }
   };
 
