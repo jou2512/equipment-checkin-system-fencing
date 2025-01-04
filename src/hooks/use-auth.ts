@@ -53,7 +53,8 @@ export function useInitAuth() {
         queryClient.setQueryData(['user'], user);
       } catch {
         queryClient.setQueryData(['user'], null);
-        router.push('/login');
+
+        // router.push('/login');
       }
     };
 

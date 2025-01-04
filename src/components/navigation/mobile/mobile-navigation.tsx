@@ -23,6 +23,21 @@ import { useAuth } from "@/hooks/use-auth";
 
 // Navigation configurations remain the same, just reorganized for visual clarity
 const NAVIGATION_CONFIG = {
+  public: [
+    {
+      href: "equipment-submission",
+      icon: Tag,
+      label: "Check-In",
+      requireAuth: false,
+    },
+    { href: "submissions", icon: List, label: "List", requireAuth: false },
+    {
+      href: "display-board",
+      icon: Projector,
+      label: "Display",
+      requireAuth: false,
+    },
+  ],
   profile: [
     { href: "/profile", icon: Home, label: "Home", requireAuth: false },
     {
@@ -147,8 +162,9 @@ export function MobileNavigation() {
 
   // Determine route type and role with type safety
   const getRouteTypeAndRole = () => {
-    if (pathname.startsWith("/admin"))
-      return { type: "admin" as const, role: null };
+    if (pathname.startsWith("/public_"))
+      if (pathname.startsWith("/admin"))
+        return { type: "admin" as const, role: null };
     if (pathname.startsWith("/tournament")) {
       const role = (params?.role as string) ?? "participant";
       return { type: "tournament" as const, role };
