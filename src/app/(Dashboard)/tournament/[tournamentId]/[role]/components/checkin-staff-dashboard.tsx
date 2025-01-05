@@ -22,7 +22,7 @@ export function CheckinStaffDashboard() {
 
   // Filter check-ins for current tournament
   const relevantCheckIns = checkIns.filter(
-    (checkIn) => (checkIn.tournaments as Tournament).$id === currentTournamentId
+    (checkIn) => (checkIn).$id === currentTournamentId
   );
 
   // Aggregate statistics

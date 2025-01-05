@@ -150,7 +150,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 </div>
                 <div className="ml-auto flex items-center gap-2">
                   <ModeToggle />
-                  <ActivityLogSheet />
                 </div>
               </header>
 
@@ -163,9 +162,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     </div>
                   }
                 >
-                  <main className="flex-1 overflow-y-auto p-8">
-                    {children}
-                  </main>
+                  <main className="flex-1 overflow-y-auto p-8">{children}</main>
                 </Suspense>
               </div>
             </SidebarInset>

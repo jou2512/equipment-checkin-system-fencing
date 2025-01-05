@@ -64,12 +64,12 @@ export default function MobilePickupManagementPage() {
           ]),
           Query.equal("pickupConfirmed", false),
           Query.orderDesc("$createdAt"),
-          Query.limit(300),
+          Query.limit(500),
         ]
       );
       return response.documents as CheckIn[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 10000,
   });
 
   // Confirm Pickup Mutation
@@ -81,7 +81,6 @@ export default function MobilePickupManagementPage() {
         submission.$id as string,
         {
           pickupConfirmed: true,
-          pickupComment: pickupComment,
         }
       );
     },
