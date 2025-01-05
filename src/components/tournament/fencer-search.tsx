@@ -28,17 +28,19 @@ export function FencerSearch({ tournamentId, onSelect }: FencerSearchProps) {
   useEffect(() => {
     const fetchFencers = async () => {
       try {
-        // Fetch tournament admins using Hono endpoint
-        const response = await client.api.teams.adminMembers.$post({
-          json: { teamId: tournamentId },
+        const response = await fetch("/api/teams/adminMembers", {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer honoiscool",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ teamId: tournamentId }),
         });
 
         const data = await response.json();
         if (!data.success) {
-          // @ts-expect-error
           throw new Error(data.error || "Failed to fetch fencers");
         }
-          // @ts-expect-error
         setFencers(data.fencers);
       } catch (error) {
         console.error("Error fetching fencers:", error);

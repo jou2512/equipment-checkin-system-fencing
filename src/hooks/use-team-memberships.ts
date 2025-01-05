@@ -52,17 +52,19 @@ export function useTeamMemberships() {
       try {
         const user = await account.get();
         
-        // Use Hono endpoint to get memberships
-        const response = await client.api.users.memberships.$post({
-          json: { userId: user.$id }
+        const response = await fetch('/api/users/memberships', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer honoiscool',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ userId: user.$id })
         });
         
         const data = await response.json();
         if (!data.success) {
-          // @ts-expect-error
           throw new Error(data.error || 'Failed to fetch memberships');
         }
-        // @ts-expect-error
         return data.memberships;
       } catch (fetchError) {
         console.error('Failed to fetch team memberships', fetchError);
@@ -122,24 +124,26 @@ export function useTeamMemberships() {
         const { tournamentId, role } = decodeInviteCode(invitationCode);
         const user = await account.get();
 
-        // Use Hono endpoint to join tournament
-        const response = await client.api.teams.join.$post({
-          json: {
+        const response = await fetch('/api/teams/join', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer honoiscool',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
             tournamentId,
             role,
             userEmail: user.email,
             userId: user.$id,
             userName: user.name
-          }
+          })
         });
 
         const data = await response.json();
         if (!data.success) {
-          // @ts-expect-error
           throw new Error(data.error || 'Failed to join tournament');
         }
 
-        await queryClient.invalidateQueries({ queryKey: ['teamMemberships'] });
         return data;
       } catch (error) {
         console.error('Tournament join failed', error);
@@ -167,16 +171,19 @@ export function useTeamMemberships() {
 
   const getTournamentPrefs = useMutation({
     mutationFn: async (tournamentId: string) => {
-      const response = await client.api.teams.prefs.$post({
-        json: { teamId: tournamentId }
+      const response = await fetch('/api/teams/prefs', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer honoiscool',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ teamId: tournamentId })
       });
       
       const data = await response.json();
       if (!data.success) {
-        // @ts-expect-error
         throw new Error(data.error || 'Failed to fetch preferences');
       }
-      // @ts-expect-error
       return data.preferences;
     },
     onSuccess: (data) => {
