@@ -9,7 +9,6 @@ import {
   CheckIn 
 } from '@/lib/appwrite/types';
 import { Models } from 'appwrite';
-import { useRouter } from 'next/navigation';
 import { client } from '@/lib/hono/hono-client';
 
 // Invite Code Utilities
@@ -36,7 +35,6 @@ export interface EnrichedTeamMembership {
 
 export function useTeamMemberships() {
   const queryClient = useQueryClient();
-  const router = useRouter();
   const { checkIns } = useCheckIns();
   const { tournaments } = useTournaments();
 
@@ -156,7 +154,6 @@ export function useTeamMemberships() {
         description: 'You have successfully joined the tournament.',
         className: 'bg-green-100'
       });
-      router.push('/profile');
     },
     onError: (error) => {
       toast({

@@ -21,6 +21,7 @@ export function useTournaments() {
     data: tournaments = [],
     isLoading,
     isError,
+    ...all
   } = useQuery<Tournament[]>({
     queryKey: ["tournaments"],
     queryFn: async () => {
@@ -280,6 +281,7 @@ export function useTournaments() {
     tournaments,
     isLoading,
     isError,
+    all,
     addTournament,
     updateTournament,
     deleteTournament,
