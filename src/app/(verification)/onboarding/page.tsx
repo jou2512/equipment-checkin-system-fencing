@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { account } from "@/lib/appwrite/config";
+import { FEATURES } from "@/lib/features/flags";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,22 +31,39 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
-import { client } from "@/lib/hono/hono-client";
 
-// Validation Schemas for Different Roles
-const fencerSchema = z.object({
-  nationalityCode: z
-    .string()
-    .length(3, { message: "Nationality code must be 3 letters" }),
-  weapon: z.enum(["epee", "foil", "sabre"], {
-    errorMap: () => ({ message: "Please select a weapon" }),
-  }),
-  phone: z.string().optional(),
-  notifications: z.object({
-    checkInStatus: z.boolean().default(true),
-    pickupReady: z.boolean().default(true),
-  }),
-});
+// Create dynamic schemas based on feature flags
+const createFencerSchema = () => {
+  const baseSchema = {
+    nationalityCode: z
+      .string()
+      .length(3, { message: "Nationality code must be 3 letters" }),
+    weapon: z.enum(["epee", "foil", "sabre"], {
+      errorMap: () => ({ message: "Please select a weapon" }),
+    }),
+    notifications: z.object({
+      ...(FEATURES.NOTIFICATION_CHECKIN
+        ? {
+            checkInStatus: z.boolean().default(true),
+          }
+        : {}),
+      ...(FEATURES.NOTIFICATION_PICKUP
+        ? {
+            pickupReady: z.boolean().default(true),
+          }
+        : {}),
+    }),
+  };
+
+  if (FEATURES.PHONE_INPUT) {
+    return z.object({
+      ...baseSchema,
+      phone: z.string().min(1, "Phone number is required"),
+    });
+  }
+
+  return z.object(baseSchema);
+};
 
 const staffSchema = z.object({
   phone: z
@@ -65,12 +83,10 @@ export default function OnboardingPage() {
   const [role, setRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch user's role from account preferences
   useEffect(() => {
     const fetchUserRole = async () => {
       try {
         const prefs = await account.getPrefs();
-        console.log(prefs.onboardingComplete, !prefs.onboardingComplete);
         if (prefs.onboardingComplete) router.push("/profile");
         setRole(prefs.role);
       } catch (error) {
@@ -86,69 +102,67 @@ export default function OnboardingPage() {
     fetchUserRole();
   }, [router]);
 
-  // Dynamic form based on role
-  const renderForm = () => {
-    switch (role) {
-      case "fencer":
-        return <FencerOnboardingForm />;
-      case "staff":
-        return <StaffOnboardingForm />;
-      case "organizer":
-        return <OrganizerOnboardingForm />;
-      default:
-        return null;
-    }
-  };
-
   const FencerOnboardingForm = () => {
     const form = useForm({
-      resolver: zodResolver(fencerSchema),
+      resolver: zodResolver(createFencerSchema()),
       defaultValues: {
         nationalityCode: "",
         weapon: undefined,
-        phone: "",
+        ...(FEATURES.PHONE_INPUT ? { phone: "" } : {}),
         notifications: {
-          checkInStatus: false,
-          pickupReady: false,
+          ...(FEATURES.NOTIFICATION_CHECKIN ? { checkInStatus: true } : {}),
+          ...(FEATURES.NOTIFICATION_PICKUP ? { pickupReady: true } : {}),
         },
       },
     });
 
-    const onSubmit = async (data: z.infer<typeof fencerSchema>) => {
+    const onSubmit = async (data: any) => {
       setIsLoading(true);
       try {
+
+        const user = await account.get();
+
+        const response = await fetch("/api/users/setUserRole", {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer honoiscool",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: user.$id,
+            role: role as string,
+          }),
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+          throw new Error(result.error || "Failed to update user role");
+        }
+
+
         const prefs = await account.getPrefs();
         await account.updatePrefs({
           ...prefs,
           nationalityCode: data.nationalityCode,
           weapon: data.weapon,
-          phone: data.phone,
-          notifications_checkin: data.notifications.checkInStatus,
-          notifications_pickup: data.notifications.pickupReady,
+          ...(FEATURES.PHONE_INPUT ? { phone: data.phone } : {}),
+          ...(FEATURES.NOTIFICATION_CHECKIN
+            ? {
+                notifications_checkin: data.notifications.checkInStatus,
+              }
+            : {}),
+          ...(FEATURES.NOTIFICATION_PICKUP && {
+            notifications_pickup: data.notifications.pickupReady,
+          }),
           onboardingComplete: true,
         });
-
-        const user = await account.get();
-
-        // Update user labels using Hono client
-        const response = await client.api.users.setUserRole.$post({
-          json: {
-            userId: user.$id,
-            role: role as string,
-          },
-        });
-
-        const result = await response.json();
-        if (!result.success) {
-          // @ts-expect-error
-          throw new Error(result.error || "Failed to update user role");
-        }
 
         toast({
           title: "Profile Updated",
           description: "Your fencer profile is complete.",
         });
 
+        router.refresh();
         router.push("/profile");
       } catch (error) {
         console.log(error);
@@ -165,7 +179,6 @@ export default function OnboardingPage() {
 
     return (
       <Form {...form}>
-        {/* @ts-ignore */}
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
             control={form.control}
@@ -209,55 +222,72 @@ export default function OnboardingPage() {
             )}
           />
 
-          {/* <FormField
-            control={form.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone Number (Optional)</FormLabel>
-                <FormControl>
-                  <PhoneInput containerClass="" country={"ch"} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          /> */}
+          {FEATURES.PHONE_INPUT && (
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number *</FormLabel>
+                  <FormControl>
+                    <PhoneInput
+                      containerClass=""
+                      country={"ch"}
+                      {...field}
+                      inputStyle={{
+                        width: "100%",
+                        height: "40px",
+                        fontSize: "16px",
+                        paddingLeft: "48px",
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
           <div className="space-y-4">
             <FormLabel>Notification Preferences</FormLabel>
             <div className="space-y-2">
-              {/* <FormField
-                control={form.control}
-                name="notifications.checkInStatus"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel>Receive Check-in Status Updates</FormLabel>
-                  </FormItem>
-                )}
-              /> */}
-              <FormField
-                control={form.control}
-                name="notifications.pickupReady"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel>
-                      Notify When Equipment is Ready for Pickup
-                    </FormLabel>
-                  </FormItem>
-                )}
-              />
+              {FEATURES.NOTIFICATION_CHECKIN && (
+                <FormField
+                  control={form.control}
+                  name="notifications.checkInStatus"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel>Receive Check-in Status Updates</FormLabel>
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {FEATURES.NOTIFICATION_PICKUP && (
+                <FormField
+                  control={form.control}
+                  name="notifications.pickupReady"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel>
+                        Notify When Equipment is Ready for Pickup
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
           </div>
 
@@ -290,7 +320,7 @@ export default function OnboardingPage() {
           description: "Your staff profile is complete.",
         });
 
-        router.push("/dashboard");
+        router.push("/profile");
       } catch (error) {
         toast({
           title: "Update Failed",
@@ -349,7 +379,7 @@ export default function OnboardingPage() {
           description: "Your organizer profile is complete.",
         });
 
-        router.push("/dashboard");
+        router.push("/profile");
       } catch (error) {
         toast({
           title: "Update Failed",
@@ -390,7 +420,19 @@ export default function OnboardingPage() {
     );
   };
 
-  // No role detected
+  const renderForm = () => {
+    switch (role) {
+      case "fencer":
+        return <FencerOnboardingForm />;
+      case "staff":
+        return <StaffOnboardingForm />;
+      case "organizer":
+        return <OrganizerOnboardingForm />;
+      default:
+        return null;
+    }
+  };
+
   if (!role) {
     return (
       <div className="flex items-center justify-center min-h-screen">
