@@ -46,7 +46,7 @@ export default function ParticipantDashboard() {
   // Filter check-ins for current tournament
   const relevantCheckIns = checkIns.filter(
     (checkIn) =>
-      (checkIn.tournaments as Tournament).$id === currentTournamentId &&
+      (checkIn).$id === currentTournamentId &&
       // @ts-ignore
       checkIn.fencerID === user?.$id
   );
