@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { account } from "@/lib/appwrite/config";
 import { toast } from "@/hooks/use-toast";
@@ -9,9 +10,15 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function ResendVerificationPage() {
-  const [status, setStatus] = useState<"loading" | "success" | "error">(
-    "loading"
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ResendVerificationContent />
+    </Suspense>
   );
+}
+
+function ResendVerificationContent() {
+  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -24,10 +31,7 @@ export default function ResendVerificationPage() {
           throw new Error("User ID is missing");
         }
 
-        // Get base URL and construct verification URL
         const verificationUrl = `${window.location.origin}/verify/email`;
-
-        // Create a new verification using Appwrite
         await account.createVerification(verificationUrl);
 
         setStatus("success");
@@ -36,7 +40,6 @@ export default function ResendVerificationPage() {
           description: "Please check your email for the verification link.",
         });
 
-        // Redirect to login after 3 seconds
         setTimeout(() => {
           router.push("/login");
         }, 3000);
@@ -44,7 +47,6 @@ export default function ResendVerificationPage() {
         console.error("Resend verification error:", error);
         setStatus("error");
 
-        // Handle specific Appwrite errors
         const errorMessage =
           error instanceof Error
             ? error.message.includes("Too many requests")
