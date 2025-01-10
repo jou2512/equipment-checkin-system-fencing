@@ -9,7 +9,6 @@ import {
   CheckIn 
 } from '@/lib/appwrite/types';
 import { Models } from 'appwrite';
-import { client } from '@/lib/hono/hono-client';
 
 // Invite Code Utilities
 import { 

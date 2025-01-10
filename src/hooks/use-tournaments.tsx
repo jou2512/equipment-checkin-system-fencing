@@ -9,8 +9,6 @@ import {
   Tournament,
   TournamentActiveWeaponsType,
 } from "@/lib/appwrite/types";
-import { RoleType } from "./use-permissions";
-import { client } from "@/lib/hono/hono-client";
 
 // Hook for managing tournaments
 export function useTournaments() {

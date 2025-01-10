@@ -10,7 +10,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { client } from "@/lib/hono/hono-client";
 import { Models } from "node-appwrite";
 
 type FencerSearchProps = {

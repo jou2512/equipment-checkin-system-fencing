@@ -3,7 +3,6 @@ import { account } from '@/lib/appwrite/config';
 import { useTournamentContext } from '@/contexts/tournament-context';
 import { toast } from './use-toast';
 import { useCallback } from 'react';
-import { client } from '@/lib/hono/hono-client';
 
 // Define role permissions structure
 export const ROLE_PERMISSIONS = {
