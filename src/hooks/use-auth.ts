@@ -17,8 +17,8 @@ export type PreferredWeapon = 'epee' | 'foil' | 'sabre';
 
 export interface UserPreferences {
   role: string;
-  nationality?: string;
-  preferredWeapon?: PreferredWeapon;
+  nationalityCode?: string | null;
+  weapon?: PreferredWeapon | null;
   onboardingCompleted: boolean;
   language?: string;
   notificationSettings: {
@@ -217,48 +217,61 @@ export function useAuth() {
     mutationFn: async ({
       email,
       password,
-      name
+      first_name,
+      last_name,
+      role,
     }: {
       email: string;
       password: string;
-      name: string;
+      first_name: string;
+      last_name: string;
+      role: string;
     }) => {
       try {
-        // Create user account with default preferences
-        const user = await account.create(
-          ID.unique(),
-          email,
-          password,
-          name
-        );
-        
-        // Set default preferences
-        await account.updatePrefs(defaultPreferences);
-        
+        // Create user account
+        const user = await account.create(ID.unique(), email, password, `${first_name} ${last_name}`);
+
         // Create session
         await account.createEmailPasswordSession(email, password);
+
+        // Send verification email
+        await account.createVerification(`${window.location.origin}/verify/email`);
+
+        // Update preferences
+        await account.updatePrefs({
+          role,
+          name: `${first_name} ${last_name}`,
+          onboardingComplete: role !== "fencer",
+        });
+
         return user;
       } catch (error) {
         throw handleAuthError(error);
       }
     },
-    onSuccess: (user) => {
+  onSuccess: async (user, { role }) => {
+    try {
       queryClient.setQueryData(USER_QUERY_KEY, user);
       sessionStorage.setItem(SESSION_STORAGE_KEY, user.$id);
       toast({
-        title: "Welcome!",
-        description: "Your account has been created successfully."
+        title: "Registration Successful",
+        description: "Please check your email to verify your account.",
       });
-      router.push('/onboarding');
-    },
-    onError: (error: AuthError) => {
-      toast({
-        variant: "destructive",
-        title: "Sign up failed",
-        description: error.message,
-      });
+      //await updateUserRole(user.$id, role);
+
+    } catch (error) {
+      console.error('Post-registration error:', error);
     }
-  });
+  },
+  onError: (error: AuthError) => {
+    toast({
+      variant: "destructive",
+      title: "Registration Failed",
+      description: error.message,
+    });
+  }
+});
+
 
   // Sign out mutation
   const signOut = useMutation({
@@ -361,6 +374,23 @@ export function useAuth() {
       router.push(returnUrl);
     },
   });
+
+  // finish the user setrole with mutation
+  const updateUserRole = async (userId: string, role: string) => {
+    const response = await fetch("/api/users/setUserRole", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer honoiscool",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ userId, role }),
+    });
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || "Failed to update user role");
+    }
+  };
 
   return {
     user,

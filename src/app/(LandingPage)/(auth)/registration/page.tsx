@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { account } from "@/lib/appwrite/config";
 import { ID } from "appwrite";
+import Link from "next/link";
+import { Info, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +27,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import {
   Tooltip,
@@ -33,34 +36,48 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
-import { Info, ChromeIcon as Google } from "lucide-react";
-import Link from "next/link";
+import { useAuth } from "@/hooks/use-auth";
 
-// Validation Schema
+const ROLES = ["fencer", "staff"] as const;
+
 const registrationSchema = z.object({
   first_name: z
     .string()
-    .min(2, { message: "First Name must be at least 2 characters long" }),
+    .min(2, { message: "First name must be at least 2 characters" })
+    .max(50, { message: "First name cannot exceed 50 characters" }),
   last_name: z
     .string()
-    .min(2, { message: "Last Name must be at least 2 characters long" }),
-  email: z.string().email({ message: "Invalid email address" }),
+    .min(2, { message: "Last name must be at least 2 characters" })
+    .max(50, { message: "Last name cannot exceed 50 characters" }),
+  email: z
+    .string()
+    .min(1, { message: "Email is required" })
+    .email({ message: "Invalid email address" })
+    .transform((val) => val.toLowerCase()),
   password: z
     .string()
-    .min(8, { message: "Password must be at least 8 characters long" })
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/, {
-      message: "Password must contain uppercase, lowercase, and number",
+    .min(8, { message: "Password must be at least 8 characters" })
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
+      message:
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number",
     }),
-  role: z.enum(["fencer", "staff", "organizer"], {
-    errorMap: () => ({ message: "Please select a role" }),
+  role: z.enum(ROLES, {
+    required_error: "Please select a role",
   }),
 });
 
 type RegistrationData = z.infer<typeof registrationSchema>;
 
-export default function QuickRegistrationPage() {
+export default function RegistrationPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const { signUp } = useAuth();
+
+  // Handle client-side mounting
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const form = useForm<RegistrationData>({
     resolver: zodResolver(registrationSchema),
@@ -74,67 +91,38 @@ export default function QuickRegistrationPage() {
   });
 
   const handleRegistration = async (data: RegistrationData) => {
-    setIsLoading(true);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     try {
-      // Create user account
-      const user = await account.create(
-        ID.unique(),
-        data.email,
-        data.password,
-        `${data.first_name} ${data.last_name}`
-      );
-
-      // Create email session
-      await account.createEmailPasswordSession(data.email, data.password);
-
-      // Initiate email verification
-      await account.createVerification(
-        `${window.location.origin}/verify/email`
-      );
-
-      
-
-      toast({
-        title: "Registration Successful",
-        description: "Welcome to the platform!",
-      });
-
-      if (data.role === 'fencer') {
-        // Update user preferences with role
-        await account.updatePrefs({
-          role: data.role,
-          name: `${data.first_name} | ${data.last_name}`,
-          onboardingComplete: false,
-        });
-        // Redirect to onboarding/profile completion
-        router.push("/onboarding");
-      } else {
-        // Update user preferences with role
-        await account.updatePrefs({
-          role: data.role,
-          name: `${data.first_name} | ${data.last_name}`,
-          onboardingComplete: true,
-        });
-        router.push("/admin");
-      }
+      await signUp.mutateAsync(data);
+      // Delay navigation to allow time for toast notification
+      setTimeout(() => {
+        router.push(data.role === "fencer" ? "/onboarding" : "/profile");
+      }, 3000);
     } catch (error) {
-      toast({
-        title: "Registration Failed",
-        description:
-          error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-      });
+      console.error("Registration error:", error);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
+
+  // Don't render until client-side hydration is complete
+  if (!mounted) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
-          Create Your Account
-        </h1>
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/50 flex items-center justify-center p-4">
+      <div className="max-w-md w-full space-y-6">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold">Create Your Account</h1>
+          <p className="text-muted-foreground">
+            Join our platform to participate in tournaments
+          </p>
+        </div>
+
         <Card>
           <CardContent className="pt-6">
             <Form {...form}>
@@ -142,28 +130,29 @@ export default function QuickRegistrationPage() {
                 onSubmit={form.handleSubmit(handleRegistration)}
                 className="space-y-4"
               >
-                <div className="flex flex-col sm:flex-row sm:space-x-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="first_name"
                     render={({ field }) => (
-                      <FormItem className="flex-1">
+                      <FormItem>
                         <FormLabel>
-                          First Name *
+                          First Name
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger>
                                 <Info className="inline-block ml-2 h-4 w-4 text-muted-foreground" />
                               </TooltipTrigger>
-                              <TooltipContent>
-                                Your first name as it appears on official
-                                documents
-                              </TooltipContent>
+                              <TooltipContent>Your first name</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter first name" {...field} />
+                          <Input
+                            {...field}
+                            disabled={isSubmitting}
+                            autoComplete="given-name"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -173,23 +162,24 @@ export default function QuickRegistrationPage() {
                     control={form.control}
                     name="last_name"
                     render={({ field }) => (
-                      <FormItem className="flex-1">
+                      <FormItem>
                         <FormLabel>
-                          Last Name *
+                          Last Name
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger>
                                 <Info className="inline-block ml-2 h-4 w-4 text-muted-foreground" />
                               </TooltipTrigger>
-                              <TooltipContent>
-                                Your last name as it appears on official
-                                documents
-                              </TooltipContent>
+                              <TooltipContent>Your last name</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter last name" {...field} />
+                          <Input
+                            {...field}
+                            disabled={isSubmitting}
+                            autoComplete="family-name"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -202,27 +192,18 @@ export default function QuickRegistrationPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        Email *
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Info className="inline-block ml-2 h-4 w-4 text-muted-foreground" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Your primary email for account communication and
-                              verification
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </FormLabel>
+                      <FormLabel>Email</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Enter email"
-                          type="email"
                           {...field}
+                          type="email"
+                          disabled={isSubmitting}
+                          autoComplete="email"
                         />
                       </FormControl>
+                      <FormDescription>
+                        You'll need to verify this email address
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -233,27 +214,19 @@ export default function QuickRegistrationPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        Password *
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Info className="inline-block ml-2 h-4 w-4 text-muted-foreground" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Strong password with uppercase, lowercase, and
-                              numbers
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </FormLabel>
+                      <FormLabel>Password</FormLabel>
                       <FormControl>
                         <Input
-                          type="password"
-                          placeholder="Enter password"
                           {...field}
+                          type="password"
+                          disabled={isSubmitting}
+                          autoComplete="new-password"
                         />
                       </FormControl>
+                      <FormDescription>
+                        At least 8 characters with uppercase, lowercase, and
+                        numbers
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -265,15 +238,14 @@ export default function QuickRegistrationPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Role *
+                        Role
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger>
                               <Info className="inline-block ml-2 h-4 w-4 text-muted-foreground" />
                             </TooltipTrigger>
                             <TooltipContent>
-                              Select your primary role in the tournament
-                              ecosystem
+                              Your primary role in the tournament ecosystem
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -281,20 +253,16 @@ export default function QuickRegistrationPage() {
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
+                        disabled={isSubmitting}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select your role" />
+                            <SelectValue />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="fencer">Fencer</SelectItem>
-                          <SelectItem value="staff">
-                            Staff/Team Member
-                          </SelectItem>
-                          {/* <SelectItem value="organizer">
-                            Tournament Organizer
-                          </SelectItem> */}
+                          <SelectItem value="staff">Staff Member</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -302,37 +270,36 @@ export default function QuickRegistrationPage() {
                   )}
                 />
 
-                <p className="text-sm italic text-muted-foreground">
-                  * Required Fields
-                </p>
-
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Creating Account..." : "Register"}
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating Account...
+                    </>
+                  ) : (
+                    "Create Account"
+                  )}
                 </Button>
               </form>
             </Form>
           </CardContent>
+
           <CardFooter className="flex flex-col space-y-4">
-            <div className="flex flex-row text-sm space-x-2">
-              <p>Already an Account? </p>
-              <Link href="/login" className=" underline">
-                SignIn
+            <div className="text-sm text-center space-x-1">
+              <span className="text-muted-foreground">
+                Already have an account?
+              </span>
+              <Link
+                href="/login"
+                className="underline hover:text-primary transition-colors"
+              >
+                Sign in
               </Link>
             </div>
-            {/* <div className="relative w-full">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with
-                </span>
-              </div>
-            </div>
-            <Button variant="outline" className="w-full">
-              <Google className="mr-2 h-4 w-4" />
-              Google
-            </Button> */}
           </CardFooter>
         </Card>
       </div>

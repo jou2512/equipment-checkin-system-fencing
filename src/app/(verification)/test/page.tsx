@@ -60,6 +60,7 @@ export default function TestPage() {
   // Test functions for each endpoint
   const tests = {
     "Basic Test": () => makeRequest("/test"),
+    "Test Email send": () => makeRequest("/send-support-email"),
 
     "List Users": () => makeRequest("/users"),
 
@@ -93,7 +94,7 @@ export default function TestPage() {
       makeRequest("/users/memberships", {
         method: "POST",
         body: JSON.stringify({
-          userId: "test-user",
+          userId: "677bdb950032a1f17bc5",
         }),
       }),
 

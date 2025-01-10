@@ -20,6 +20,8 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
 export function ClientProviders({ children }: ClientProvidersProps) {
   const [queryClient] = useState(() => new QueryClient());
 
+
+  // NOTE The Client Provider is FInished
   return (
     <QueryClientProvider client={queryClient}>
       <AdminNavigationProvider>

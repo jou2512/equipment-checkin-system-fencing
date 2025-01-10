@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { account } from "@/lib/appwrite/config";
 import { ID } from "appwrite";
+import Link from "next/link";
+import { Info, Loader2, Phone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +20,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import {
   Tooltip,
@@ -26,25 +29,28 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
-import { ChromeIcon as Google, Info, Phone } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import Link from "next/link";
 
 // Feature Flags
 const FEATURES = {
-  SMS_LOGIN: false, // Toggle SMS login on/off
+  SMS_LOGIN: false,
 };
 
 // Validation Schemas
 const passwordLoginSchema = z.object({
-  email: z.string().email({ message: "Invalid email address" }),
+  email: z
+    .string()
+    .min(1, { message: "Email is required" })
+    .email({ message: "Invalid email address" })
+    .transform((val) => val.toLowerCase()),
   password: z.string().min(1, { message: "Password is required" }),
 });
 
 const smsLoginSchema = z.object({
   phone: z
     .string()
-    .regex(/^\+[1-9]\d{1,14}$/, { message: "Invalid phone number" }),
+    .min(1, { message: "Phone number is required" })
+    .regex(/^\+[1-9]\d{1,14}$/, { message: "Invalid phone number format" }),
 });
 
 type PasswordLoginData = z.infer<typeof passwordLoginSchema>;
@@ -52,13 +58,17 @@ type SMSLoginData = z.infer<typeof smsLoginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const {signIn} = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const { signIn } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginMethod, setLoginMethod] = useState<"password" | "sms">(
     "password"
   );
+  const [mounted, setMounted] = useState(false);
 
-  // Password Login Form
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const passwordForm = useForm<PasswordLoginData>({
     resolver: zodResolver(passwordLoginSchema),
     defaultValues: {
@@ -67,7 +77,6 @@ export default function LoginPage() {
     },
   });
 
-  // SMS Login Form
   const smsForm = useForm<SMSLoginData>({
     resolver: zodResolver(smsLoginSchema),
     defaultValues: {
@@ -76,78 +85,113 @@ export default function LoginPage() {
   });
 
   const handlePasswordLogin = async (data: PasswordLoginData) => {
-    setIsLoading(true);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     try {
-      signIn.mutate(data);
+      await signIn.mutateAsync(data);
     } catch (error) {
+      console.error("Login error:", error);
+
+      let errorMessage = "Failed to log in. Please try again.";
+
+      if (error instanceof Error) {
+        if (error.message.includes("Invalid credentials")) {
+          errorMessage = "Invalid email or password.";
+        } else if (error.message.includes("network")) {
+          errorMessage = "Network error. Please check your connection.";
+        } else if (error.message.includes("verification")) {
+          errorMessage = "Please verify your email before logging in.";
+        }
+      }
+
       toast({
         title: "Login Failed",
-        description:
-          error instanceof Error ? error.message : "An error occurred",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleSMSLogin = async (data: SMSLoginData) => {
-    setIsLoading(true);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     try {
-      // Create phone token
       const token = await account.createPhoneToken(ID.unique(), data.phone);
 
       toast({
-        title: "Verification Sent",
-        description: "Check your phone for the verification code",
+        title: "Verification Code Sent",
+        description: "Please check your phone for the verification code.",
       });
 
-      // Redirect to SMS verification page
       router.push(`/verify/phone?userId=${token.userId}`);
     } catch (error) {
+      console.error("SMS login error:", error);
+
+      let errorMessage = "Failed to send verification code.";
+
+      if (error instanceof Error) {
+        if (error.message.includes("rate limit")) {
+          errorMessage = "Too many attempts. Please try again later.";
+        } else if (error.message.includes("network")) {
+          errorMessage = "Network error. Please check your connection.";
+        }
+      }
+
       toast({
         title: "SMS Login Failed",
-        description:
-          error instanceof Error ? error.message : "An error occurred",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
+  if (!mounted) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
-          Login to Your Account
-        </h1>
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/50 flex items-center justify-center p-4">
+      <div className="max-w-md w-full space-y-6">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold">Welcome Back</h1>
+          <p className="text-muted-foreground">
+            Sign in to access your account
+          </p>
+        </div>
+
         <Card>
           <CardContent className="pt-6">
-            {/* SMS Login Toggle (conditionally rendered) */}
             {FEATURES.SMS_LOGIN && (
-              <div className="flex justify-center mb-4">
-                <div className="flex space-x-2 bg-muted rounded-lg p-1">
+              <div className="flex justify-center mb-6">
+                <div className="inline-flex rounded-md border p-1">
                   <Button
-                    variant={loginMethod === "password" ? "default" : "ghost"}
+                    variant={loginMethod === "password" ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => setLoginMethod("password")}
+                    disabled={isSubmitting}
                   >
-                    Password Login
+                    Password
                   </Button>
                   <Button
-                    variant={loginMethod === "sms" ? "default" : "ghost"}
+                    variant={loginMethod === "sms" ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => setLoginMethod("sms")}
+                    disabled={isSubmitting}
                   >
-                    <Phone className="mr-2 h-4 w-4" /> SMS Login
+                    <Phone className="mr-2 h-4 w-4" />
+                    SMS
                   </Button>
                 </div>
               </div>
             )}
 
-            {/* Password Login Form */}
-            {loginMethod === "password" && (
+            {loginMethod === "password" ? (
               <Form {...passwordForm}>
                 <form
                   onSubmit={passwordForm.handleSubmit(handlePasswordLogin)}
@@ -158,24 +202,13 @@ export default function LoginPage() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>
-                          Email *
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="inline-block ml-2 h-4 w-4 text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                Enter the email used during registration
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </FormLabel>
+                        <FormLabel>Email</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter email"
-                            type="email"
                             {...field}
+                            type="email"
+                            autoComplete="email"
+                            disabled={isSubmitting}
                           />
                         </FormControl>
                         <FormMessage />
@@ -188,24 +221,13 @@ export default function LoginPage() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>
-                          Password *
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="inline-block ml-2 h-4 w-4 text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                Enter your account password
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </FormLabel>
+                        <FormLabel>Password</FormLabel>
                         <FormControl>
                           <Input
-                            type="password"
-                            placeholder="Enter password"
                             {...field}
+                            type="password"
+                            autoComplete="current-password"
+                            disabled={isSubmitting}
                           />
                         </FormControl>
                         <FormMessage />
@@ -213,15 +235,23 @@ export default function LoginPage() {
                     )}
                   />
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Logging in..." : "Login"}
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing In...
+                      </>
+                    ) : (
+                      "Sign In"
+                    )}
                   </Button>
                 </form>
               </Form>
-            )}
-
-            {/* SMS Login Form */}
-            {FEATURES.SMS_LOGIN && loginMethod === "sms" && (
+            ) : (
               <Form {...smsForm}>
                 <form
                   onSubmit={smsForm.handleSubmit(handleSMSLogin)}
@@ -232,61 +262,54 @@ export default function LoginPage() {
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>
-                          Phone Number *
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="inline-block ml-2 h-4 w-4 text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                Enter your phone number with country code
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </FormLabel>
+                        <FormLabel>Phone Number</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="+1234567890"
-                            type="tel"
                             {...field}
+                            type="tel"
+                            placeholder="+1234567890"
+                            disabled={isSubmitting}
                           />
                         </FormControl>
+                        <FormDescription>
+                          Enter your phone number with country code
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading
-                      ? "Sending Verification..."
-                      : "Send Verification"}
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending Code...
+                      </>
+                    ) : (
+                      "Send Verification Code"
+                    )}
                   </Button>
                 </form>
               </Form>
             )}
           </CardContent>
+
           <CardFooter className="flex flex-col space-y-4">
-            <div className="flex flex-row text-sm space-x-2">
-              <p>No account yet? </p>
-              <Link href="/registration" className=" underline">
-                 SignUp
+            <div className="text-sm text-center space-x-1">
+              <span className="text-muted-foreground">
+                Don't have an account?
+              </span>
+              <Link
+                href="/registration"
+                className="underline hover:text-primary transition-colors"
+              >
+                Sign up
               </Link>
             </div>
-            {/* <div className="relative w-full">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with
-                </span>
-              </div>
-            </div>
-            <Button variant="outline" className="w-full">
-              <Google className="mr-2 h-4 w-4" />
-              Google
-            </Button> */}
           </CardFooter>
         </Card>
       </div>

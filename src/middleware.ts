@@ -3,6 +3,8 @@ import type { NextRequest } from 'next/server';
 import { authMiddleware} from '../middleware/auth-middleware';
 import { headerMiddleware } from '../middleware/header-middleware';
 
+// TODO: Setup the middlewear (Routing, Redirecting, Auth)
+
 export async function middleware(request: NextRequest) {
   
   // First, modify headers
