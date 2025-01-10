@@ -79,7 +79,7 @@ export default function TournamentJoinForm() {
         const urlCode = searchParams.get("code");
         const pendingCode = localStorage.getItem(PENDING_CODE_KEY);
 
-        let codeToUse = urlCode || pendingCode || "";
+        const codeToUse = urlCode || pendingCode || "";
 
         // Validate the code if present
         if (codeToUse) {
