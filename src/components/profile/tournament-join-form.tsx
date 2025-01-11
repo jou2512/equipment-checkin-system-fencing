@@ -25,12 +25,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { useTournamentInvites } from "@/hooks/use-tournament-invitations";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { useTournamentInvites } from "@/hooks/use-tournament-invitations";
 import { Loader2 } from "lucide-react";
 
 const PENDING_CODE_KEY = "pendingJoinCode";
@@ -187,24 +187,6 @@ export default function TournamentJoinForm() {
     }
   };
 
-  const handleSuccessfulJoin = (tournamentId: string, role: string) => {
-    // Clear any stored data
-    localStorage.removeItem(PENDING_CODE_KEY);
-    localStorage.removeItem(RETURN_URL_KEY);
-
-    toast({
-      title: "Successfully Joined!",
-      description: `You've joined as a ${role}`,
-      className: "bg-green-100",
-    });
-
-    const newPath = pathname.replace(
-      "profile/join",
-      `tournament/${tournamentId}/${role}`
-    );
-    router.push(newPath);
-  };
-
   const onSubmit = async (data: FormValues) => {
     if (isSubmitting) return;
 
@@ -214,17 +196,58 @@ export default function TournamentJoinForm() {
       const isAuthError = await handleAuthError(data.code);
       if (isAuthError) return;
 
-      // Process the tournament join code
+      // Process the tournament join code to get details
       const result = await processJoinCode(data.code);
 
-      if (result.success) {
-        handleSuccessfulJoin(
-          result.tournamentId as string,
-          result.role as string
-        );
-      } else {
+      if (!result.success) {
         throw new Error("Invalid tournament code");
       }
+
+      // Get the tournament details from the result
+      const { tournamentId, role } = result;
+
+      // Get user data
+      const user = await account.get();
+
+      // Make the API call to join the tournament
+      const response = await fetch('/api/teams/join', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer honoiscool',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          tournamentId,
+          role,
+          userEmail: user.email,
+          userId: user.$id,
+          userName: user.name
+        })
+      });
+
+      const joinResult = await response.json();
+      if (!joinResult.success) {
+        throw new Error(joinResult.error || 'Failed to join tournament');
+      }
+
+      // Clear any stored data
+      localStorage.removeItem(PENDING_CODE_KEY);
+      localStorage.removeItem(RETURN_URL_KEY);
+
+      // Show success toast
+      toast({
+        title: "Successfully Joined!",
+        description: `You've joined as a ${role}`,
+        className: "bg-green-100",
+      });
+
+      // Redirect to the tournament page
+      const newPath = pathname.replace(
+        "profile/join",
+        `tournament/${tournamentId}/${role}`
+      );
+      router.push(newPath);
+
     } catch (error) {
       toast({
         variant: "destructive",

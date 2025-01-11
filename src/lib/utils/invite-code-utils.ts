@@ -83,7 +83,7 @@ export function generateInviteCode(payload: InvitationPayload): string {
  */
 export function decodeInviteCode(inviteCode: string): InvitationPayload {
   // Validate input
-  if (!inviteCode || inviteCode.length < 10) {
+  if (!inviteCode || inviteCode.length < 6) {
     throw new Error('Invalid invite code');
   }
 

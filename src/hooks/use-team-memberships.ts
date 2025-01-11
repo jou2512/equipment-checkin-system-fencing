@@ -118,6 +118,12 @@ export function useTeamMemberships() {
   const joinTournamentByCode = useMutation({
     mutationFn: async (invitationCode: string) => {
       try {
+        // Process the tournament join code first
+        const processResult = await processJoinCode(invitationCode);
+        if (!processResult.success) {
+          throw new Error("Invalid tournament code");
+        }
+
         const { tournamentId, role } = decodeInviteCode(invitationCode);
         const user = await account.get();
 
@@ -141,26 +147,38 @@ export function useTeamMemberships() {
           throw new Error(data.error || 'Failed to join tournament');
         }
 
-        return data;
+        return {
+          ...data,
+          tournamentId,
+          role
+        };
       } catch (error) {
         console.error('Tournament join failed', error);
         throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Clear stored data
+      localStorage.removeItem(PENDING_CODE_KEY);
+      localStorage.removeItem(RETURN_URL_KEY);
+
+      // Show success toast with role information
       toast({
-        title: 'Tournament Joined',
-        description: 'You have successfully joined the tournament.',
-        className: 'bg-green-100'
+        title: "Successfully Joined!",
+        description: `You've joined as a ${data.role}`,
+        className: "bg-green-100",
       });
+
+      // Handle redirect
+      router.push(`tournament/${data.tournamentId}/${data.role}`);
     },
     onError: (error) => {
       toast({
-        title: 'Join Failed',
+        variant: "destructive",
+        title: "Failed to Join",
         description: error instanceof Error 
           ? error.message 
-          : 'Failed to join tournament. Please try again.',
-        variant: 'destructive'
+          : "Please check your code and try again.",
       });
     }
   });
