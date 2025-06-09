@@ -17,54 +17,44 @@ import {
   sendSupportEmail,
   sendCustomerConfirmationEmail,
 } from "@/lib/resend/resend_config";
+import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 
 export default function SupportPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  const handleSupportEmail = async (e: React.FormEvent) => {
+  /**
+   * Handle submission of the support form.
+   * Sends an email using the resend API util.
+   */
+  const handleSupportEmail = async (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
     e.preventDefault();
-    setIsSubmitting(true);
-
-    const formData = new FormData(e.target as HTMLFormElement);
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const message = formData.get("message") as string;
-
+    setIsSending(true);
+    setError(null);
+    setSuccess(false);
     try {
-      // Send email to support team
       await sendSupportEmail(name, email, message);
-      // Send confirmation email to customer
-      await sendCustomerConfirmationEmail(name, email, message);
-
-      // Reset form fields
+      setSuccess(true);
       setName("");
       setEmail("");
       setMessage("");
-
-      // Handle success, e.g., show a success message
-      toast({
-        title: "Message Sent",
-        description: "Your support request has been sent successfully.",
-      });
-    } catch (error) {
-      console.error("Support email error:", error);
-
-      // Handle error, e.g., show an error message
-      toast({
-        variant: "destructive",
-        title: "Message Failed",
-        description:
-          "There was an error sending your support request. Please try again.",
-      });
+    } catch (err) {
+      setError("Failed to send support request.");
     } finally {
-      setIsSubmitting(false);
+      setIsSending(false);
     }
   };
 
+  // TODO: Store support requests in a database for later reference
+  // TODO: Add client-side validation for form fields
+  // TODO: Implement spam prevention (e.g., reCAPTCHA)
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10 max-w-6xl">
@@ -146,7 +136,6 @@ export default function SupportPage() {
                   className="h-11"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  required
                 />
               </div>
               <div className="space-y-2">
@@ -176,13 +165,23 @@ export default function SupportPage() {
                   required
                 />
               </div>
+              {error && (
+                <p className="text-sm text-red-600" role="alert">
+                  {error}
+                </p>
+              )}
+              {success && (
+                <p className="text-sm text-green-600" role="status">
+                  Message sent successfully!
+                </p>
+              )}
               <Button
                 type="submit"
                 className="w-full md:w-auto"
                 size="lg"
-                disabled={isSubmitting}
+                disabled={isSending}
               >
-                {isSubmitting ? "Sending..." : "Send Message"}
+                {isSending ? "Sending..." : "Send Message"}
               </Button>
             </form>
           </CardContent>

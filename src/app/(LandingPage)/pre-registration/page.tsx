@@ -81,6 +81,9 @@ export default function PreRegistrationPage() {
   });
 
   const onSubmit = async (data: PreRegistrationFormData) => {
+    // TODO: Check for existing registrations using the same email to prevent
+    //       duplicate entries.
+    // TODO: Perform server-side validation of the submitted data.
     try {
       // Create pre-registration document
       const preRegistration = await databases.createDocument(
@@ -98,12 +101,15 @@ export default function PreRegistrationPage() {
 
       // Generate QR code value (could be a unique registration ID or link)
       const qrValue = `https://yourdomain.com/registration/${preRegistration.$id}`;
+      // TODO: Send a confirmation email to the fencer containing this QR code.
+      // TODO: Persist the QR code so staff can retrieve it later if needed.
       setQrCodeValue(qrValue);
 
       // Reset form
       reset();
       setRegistrationError(null);
     } catch (error) {
+      // TODO: Display more detailed error messages to the user.
       setRegistrationError("Registration failed. Please try again.");
       console.error(error);
     }
@@ -112,6 +118,9 @@ export default function PreRegistrationPage() {
   // Determine available weapons based on tournament configuration
   const availableWeapons =
     (tournament?.activeWeapons as TournamentActiveWeaponsType[]) || [];
+
+  // TODO: Integrate reCAPTCHA or similar verification before allowing
+  //       form submission to reduce spam.
 
   return (
     <div className="container mx-auto max-w-2xl py-12">
