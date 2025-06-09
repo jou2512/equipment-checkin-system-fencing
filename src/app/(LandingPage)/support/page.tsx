@@ -12,12 +12,43 @@ import { Textarea } from "@/components/ui/textarea";
 import { HelpCircle, Mail, MessageCircle, Phone } from "lucide-react";
 import Link from "next/link";
 import { sendSupportEmail } from "@/lib/resend/resend_config";
+import { useState } from "react";
 
 export default function SupportPage() {
-  // TODO: implement support emails
-  // const handleSupportEmail(e: React.FormEvent) => {
-  //   //
-  // }
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  /**
+   * Handle submission of the support form.
+   * Sends an email using the resend API util.
+   */
+  const handleSupportEmail = async (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
+    e.preventDefault();
+    setIsSending(true);
+    setError(null);
+    setSuccess(false);
+    try {
+      await sendSupportEmail(name, email, message);
+      setSuccess(true);
+      setName("");
+      setEmail("");
+      setMessage("");
+    } catch (err) {
+      setError("Failed to send support request.");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  // TODO: Store support requests in a database for later reference
+  // TODO: Add client-side validation for form fields
+  // TODO: Implement spam prevention (e.g., reCAPTCHA)
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10 max-w-6xl">
@@ -108,12 +139,18 @@ export default function SupportPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4">
+            <form className="space-y-4" onSubmit={handleSupportEmail}>
               <div className="space-y-2">
                 <label htmlFor="name" className="text-sm font-medium">
                   Name
                 </label>
-                <Input id="name" placeholder="Your name" className="h-11" />
+                <Input
+                  id="name"
+                  placeholder="Your name"
+                  className="h-11"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">
@@ -124,6 +161,8 @@ export default function SupportPage() {
                   type="email"
                   placeholder="Your email"
                   className="h-11"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -134,10 +173,27 @@ export default function SupportPage() {
                   id="message"
                   placeholder="How can we help?"
                   className="min-h-[120px] resize-y"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
                 />
               </div>
-              <Button type="submit" className="w-full md:w-auto" size="lg">
-                Send Message
+              {error && (
+                <p className="text-sm text-red-600" role="alert">
+                  {error}
+                </p>
+              )}
+              {success && (
+                <p className="text-sm text-green-600" role="status">
+                  Message sent successfully!
+                </p>
+              )}
+              <Button
+                type="submit"
+                className="w-full md:w-auto"
+                size="lg"
+                disabled={isSending}
+              >
+                {isSending ? "Sending..." : "Send Message"}
               </Button>
             </form>
           </CardContent>
