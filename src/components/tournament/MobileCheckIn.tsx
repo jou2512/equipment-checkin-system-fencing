@@ -5,6 +5,7 @@ import { useTournamentStore } from "@/lib/store/tournament-store";
 import { useCheckInStore } from "@/lib/store/check-in-store";
 import { useTournaments } from "@/hooks/use-tournaments";
 import { useCheckIns } from "@/hooks/use-checkIn";
+import { useParams } from "next/navigation";
 import {
   CheckInCheckInStatus,
   TournamentActiveWeaponsType,
@@ -33,10 +34,15 @@ import { StaffSearchDialog } from "@/components/tournament/staff-search-dialog";
 import { FencerSearch } from "@/components/tournament/fencer-search";
 import { Models } from "node-appwrite";
 
-// Feature flags at the top of the file for easy modification
-const FEATURES = {
-  NOTIFICATIONS: false, // Toggle notification features
-};
+interface MobileCheckInPageProps {
+  options?: {
+    useParams?: boolean;
+    useStore?: boolean;
+    enableSearch?: boolean;
+    enableStaffSearch?: boolean;
+    enableNotifications?: boolean;
+  };
+}
 
 // Validation Schemas
 const CheckInStatusSchema = z.nativeEnum(CheckInCheckInStatus);
@@ -77,11 +83,6 @@ const CheckInSubmissionSchema = z.object({
   fencerID: z.string().optional(),
 });
 
-type ValidationError = {
-  message: string;
-  path?: (string | number)[];
-};
-
 function formatValidationErrors(error: z.ZodError): string {
   return error.errors
     .map((err) => {
@@ -94,7 +95,7 @@ function formatValidationErrors(error: z.ZodError): string {
 function validateRequiredItems(
   itemQuantities: Record<string, number>,
   itemConfigs: Array<{ $id?: string; itemName: string; required: boolean }>
-): ValidationError | null {
+): { message: string; path?: (string | number)[] } | null {
   const missingRequired = itemConfigs.filter(
     (item) => item.required && !itemQuantities[item.$id as string]
   );
@@ -110,9 +111,15 @@ function validateRequiredItems(
   return null;
 }
 
-type ValidatedCheckInData = z.infer<typeof CheckInSubmissionSchema>;
-
-export default function MobileCheckInPage() {
+export default function MobileCheckInPage({
+  options = {
+    useParams: false,
+    useStore: true,
+    enableSearch: true,
+    enableStaffSearch: true,
+    enableNotifications: false,
+  },
+}: MobileCheckInPageProps) {
   // State for progressive disclosure
   const [selectedFencerId, setSelectedFencerId] = useState<string | null>(null);
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
@@ -122,14 +129,23 @@ export default function MobileCheckInPage() {
   const [selectedWeapon, setSelectedWeapon] =
     useState<TournamentActiveWeaponsType | null>(null);
 
-  // Existing state
-  const { currentTournamentId } = useTournamentStore();
+  // Store and parameter handling based on options
+  const params = useParams();
+  const { currentTournamentId: storeTournamentId } = useTournamentStore();
+  const currentTournamentId = options.useParams
+    ? params?.tournamentId
+    : options.useStore
+    ? storeTournamentId
+    : null;
+
+  // Other store hooks
   const { setCurrentCheckInId } = useCheckInStore();
   const { createCheckIn } = useCheckIns();
   const { SelectedTournament } = useTournaments();
   const { tournament: currentTournament, isLoading: isLoadingTournament } =
     SelectedTournament();
 
+  // Form state
   const [fencerName, setFencerName] = useState("");
   const [fencerNationality, setFencerNationality] = useState("");
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>(
@@ -138,7 +154,7 @@ export default function MobileCheckInPage() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submissionData, setSubmissionData] = useState<any>(null);
 
-  // New state for notifications
+  // Notification state (feature flagged)
   const [phoneNumber, setPhoneNumber] = useState("");
   const [notificationPreferences, setNotificationPreferences] = useState({
     status: false,
@@ -153,20 +169,19 @@ export default function MobileCheckInPage() {
     setItemQuantities({});
     setSubmissionData(null);
     setSelectedFencerId(null);
+    setPhoneNumber("");
+    setNotificationPreferences({ status: false, pickup: false });
   };
 
-  // Helper function to check if tournament has multiple weapons
   const Weapons = () => {
     const weapons = (currentTournament as Tournament)
       .activeWeapons as TournamentActiveWeaponsType[];
     return {
-      hasMultiple:
-        currentTournament?.activeWeapons && ((weapons.length > 1) as boolean),
+      hasMultiple: currentTournament?.activeWeapons && weapons.length > 1,
       weapons,
     };
   };
 
-  // Initialize form based on tournament weapons
   useEffect(() => {
     if (currentTournament) {
       setCurrentStep(Weapons().hasMultiple ? "weapon" : "details");
@@ -211,7 +226,6 @@ export default function MobileCheckInPage() {
     }
 
     try {
-      // Create item checks array
       const itemChecks = (
         (currentTournament.itemConfigs as ItemConfig[]) || []
       ).map((item) => ({
@@ -220,7 +234,6 @@ export default function MobileCheckInPage() {
         status: CheckInCheckInStatus.PENDING,
       }));
 
-      // Prepare data for validation
       const checkInData = {
         tournaments: currentTournament.$id as string,
         fencerName: fencerName || undefined,
@@ -233,7 +246,6 @@ export default function MobileCheckInPage() {
         fencerID: selectedFencerId,
       };
 
-      // First validate required items
       const requiredItemsError = validateRequiredItems(
         itemQuantities,
         currentTournament.itemConfigs as ItemConfig[]
@@ -244,12 +256,9 @@ export default function MobileCheckInPage() {
         return;
       }
 
-      // Then validate the entire submission
       const validatedData = await CheckInSubmissionSchema.parseAsync(
         checkInData
       );
-
-      // If validation passes, create check-in
       const result = await createCheckIn.mutateAsync(validatedData);
       setSubmissionData(result);
       setCurrentStep("success");
@@ -268,34 +277,6 @@ export default function MobileCheckInPage() {
     }
   };
 
-  // Review data formatting
-  const getReviewData = () => {
-    return {
-      fencer: {
-        name: fencerName || "Not provided",
-        nationality: fencerNationality || "Not provided",
-        weapon: selectedWeapon,
-        phone: FEATURES.NOTIFICATIONS
-          ? phoneNumber || "Not provided"
-          : undefined,
-      },
-      equipment: ((currentTournament?.itemConfigs as ItemConfig[]) || [])
-        .map((item) => ({
-          name: item.itemName,
-          quantity: itemQuantities[item.$id as string] || 0,
-          required: item.required,
-        }))
-        .filter((item) => item.quantity > 0 || item.required),
-      notifications: FEATURES.NOTIFICATIONS
-        ? {
-            status: notificationPreferences.status,
-            pickup: notificationPreferences.pickup,
-          }
-        : undefined,
-    };
-  };
-
-  // Loading state
   if (isLoadingTournament) {
     return (
       <div className="absolute left-1/2 top-1/3 transform -translate-x-1/2 -translate-y-1/3 text-xl font-semibold">
@@ -304,7 +285,6 @@ export default function MobileCheckInPage() {
     );
   }
 
-  // No tournament selected
   if (!currentTournament && !isLoadingTournament) {
     return (
       <div className="absolute left-1/2 top-1/3 transform -translate-x-1/2 -translate-y-1/3">
@@ -316,7 +296,6 @@ export default function MobileCheckInPage() {
     );
   }
 
-  // Success view (no longer a modal)
   if (currentStep === "success" && submissionData) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
@@ -373,16 +352,17 @@ export default function MobileCheckInPage() {
     <div className="space-y-6 max-w-2xl mx-auto">
       <header className="sticky top-0 z-10 bg-background border-b p-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">Equipment Check-In</h1>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setIsSearchDialogOpen(true)}
-        >
-          <Search className="h-4 w-4" />
-        </Button>
+        {options.enableStaffSearch && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIsSearchDialogOpen(true)}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+        )}
       </header>
 
-      {/* Weapon Selection */}
       {currentStep === "weapon" && Weapons().hasMultiple && (
         <Card>
           <CardHeader>
@@ -412,28 +392,26 @@ export default function MobileCheckInPage() {
         </Card>
       )}
 
-      {/* Fencer Details */}
       {currentStep === "details" && (
         <Card>
           <CardHeader>
             <CardTitle>Fencer Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="fencerSearch">Search Fencer</Label>
-              <FencerSearch
-                tournamentId={currentTournamentId as string}
-                onSelect={handleFencerSelect}
-              />
-            </div>
+            {options.enableSearch && (
+              <div className="mb-4">
+                <FencerSearch
+                  tournamentId={currentTournamentId as string}
+                  onSelect={handleFencerSelect}
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="fencerName">Fencer Name</Label>
               <Input
                 id="fencerName"
                 value={fencerName}
-                onChange={(e) => {
-                  setFencerName(e.target.value);
-                }}
+                onChange={(e) => setFencerName(e.target.value)}
                 placeholder="Enter fencer's name"
                 disabled={!!selectedFencerId}
               />
@@ -443,9 +421,9 @@ export default function MobileCheckInPage() {
               <Input
                 id="fencerNationality"
                 value={fencerNationality}
-                onChange={(e) => {
-                  setFencerNationality(e.target.value.toUpperCase());
-                }}
+                onChange={(e) =>
+                  setFencerNationality(e.target.value.toUpperCase())
+                }
                 disabled={!!selectedFencerId}
                 maxLength={3}
                 placeholder="e.g., USA, GER"
@@ -464,12 +442,7 @@ export default function MobileCheckInPage() {
                 </Button>
               )}
               {selectedFencerId && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    resetForm();
-                  }}
-                >
+                <Button variant="outline" onClick={resetForm}>
                   Cancel Fencer
                 </Button>
               )}
@@ -484,7 +457,6 @@ export default function MobileCheckInPage() {
         </Card>
       )}
 
-      {/* Equipment Selection */}
       {currentStep === "items" && (
         <Card>
           <CardHeader>
@@ -544,7 +516,7 @@ export default function MobileCheckInPage() {
               <Button
                 onClick={() =>
                   setCurrentStep(
-                    FEATURES.NOTIFICATIONS ? "notifications" : "review"
+                    options.enableNotifications ? "notifications" : "review"
                   )
                 }
               >
@@ -555,8 +527,7 @@ export default function MobileCheckInPage() {
         </Card>
       )}
 
-      {/* Notifications (Feature Flagged) */}
-      {FEATURES.NOTIFICATIONS && currentStep === "notifications" && (
+      {options.enableNotifications && currentStep === "notifications" && (
         <Card>
           <CardHeader>
             <CardTitle>Notification Preferences</CardTitle>
@@ -615,7 +586,6 @@ export default function MobileCheckInPage() {
         </Card>
       )}
 
-      {/* Review Step */}
       {currentStep === "review" && (
         <Card>
           <CardHeader>
@@ -638,7 +608,7 @@ export default function MobileCheckInPage() {
                     <span className="font-medium">Weapon:</span>{" "}
                     {selectedWeapon}
                   </p>
-                  {FEATURES.NOTIFICATIONS && (
+                  {options.enableNotifications && (
                     <p>
                       <span className="font-medium">Phone:</span>{" "}
                       {phoneNumber || "Not provided"}
@@ -667,7 +637,7 @@ export default function MobileCheckInPage() {
                 </div>
               </div>
 
-              {FEATURES.NOTIFICATIONS && (
+              {options.enableNotifications && (
                 <div>
                   <h3 className="font-semibold mb-2">Notifications</h3>
                   <div className="bg-muted/50 p-4 rounded-lg">
@@ -693,7 +663,7 @@ export default function MobileCheckInPage() {
                 variant="outline"
                 onClick={() =>
                   setCurrentStep(
-                    FEATURES.NOTIFICATIONS ? "notifications" : "items"
+                    options.enableNotifications ? "notifications" : "items"
                   )
                 }
               >
@@ -709,67 +679,6 @@ export default function MobileCheckInPage() {
         </Card>
       )}
 
-      {/* Success View */}
-      {currentStep === "success" && submissionData && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Submission Successful</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="bg-primary/10 p-6 rounded-lg text-center">
-              <h2 className="text-4xl font-bold mb-4">Check Number</h2>
-              <div className="text-5xl font-mono font-bold text-primary">
-                {submissionData.checkNumber}
-              </div>
-              <div className="mt-4 flex justify-center">
-                <QrCode className="h-32 w-32 text-primary" />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="font-semibold">Details</h3>
-              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                <p>
-                  <span className="font-medium">Fencer:</span>{" "}
-                  {submissionData.fencerName || "Not provided"}
-                </p>
-                <p>
-                  <span className="font-medium">Nationality:</span>{" "}
-                  {submissionData.nationalityCode || "Not provided"}
-                </p>
-                <p>
-                  <span className="font-medium">Weapon:</span>{" "}
-                  {submissionData.weaponType}
-                </p>
-              </div>
-
-              <h3 className="font-semibold">Submitted Items</h3>
-              <div className="bg-muted/50 p-4 rounded-lg">
-                <ul className="space-y-2">
-                  {submissionData.itemChecks.map(
-                    (item: any) =>
-                      item.quantity > 0 && (
-                        <li
-                          key={item.itemName}
-                          className="flex justify-between"
-                        >
-                          <span>{item.itemName}</span>
-                          <span className="font-medium">{item.quantity}</span>
-                        </li>
-                      )
-                  )}
-                </ul>
-              </div>
-            </div>
-
-            <Button className="w-full mt-6" onClick={resetForm}>
-              Start New Submission
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Error Dialog */}
       {validationError && (
         <AlertDialog
           open={!!validationError}
@@ -788,12 +697,15 @@ export default function MobileCheckInPage() {
           </AlertDialogContent>
         </AlertDialog>
       )}
-      <StaffSearchDialog
-        isOpen={isSearchDialogOpen}
-        onClose={() => setIsSearchDialogOpen(false)}
-        onSelectResult={handleSearchResult}
-        currentTournamentId={currentTournamentId as string}
-      />
+
+      {options.enableStaffSearch && (
+        <StaffSearchDialog
+          isOpen={isSearchDialogOpen}
+          onClose={() => setIsSearchDialogOpen(false)}
+          onSelectResult={handleSearchResult}
+          currentTournamentId={currentTournamentId as string}
+        />
+      )}
     </div>
   );
 }

@@ -5,7 +5,9 @@ import { bearerAuth } from 'hono/bearer-auth'
 import * as sdk from "node-appwrite"
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
+import { Resend } from 'resend'
 
+export const resend = new Resend(process.env.RESEND_API_KEY);
 const sdkclient = new sdk.Client()
   .setEndpoint("https://cloud.appwrite.io/v1")
   .setProject("675b806a0009c79f1598")
@@ -218,6 +220,51 @@ app.get('/users', async (c) => {
     return c.json({ error: 'Failed to fetch users' }, 500);
   }
 });
+
+
+// TODO: Complete the send-support-email route
+app.get('/send-support-email', async (c) => {
+  try {
+    const { data, error } = await resend.emails.send({
+    from: "onboarding@resend.dev",
+    to: 'joel22@gmx.ch',
+    subject: `Support Request from joel`,
+    html:  `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Support Request</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <p>Dear Fencing Equipment Check System Support,</p>
+
+            <p>test</p>
+
+            <p>Thank you for your assistance.</p>
+
+            <p>Best regards,<br>
+            Joel</p>
+
+            <hr style="border: none; border-top: 1px solid #ccc; margin: 20px 0;">
+
+            <p style="font-size: 12px; color: #666;">
+                This email was sent via the support form on the Fencing Equipment Check System website.
+                Sender's email: joel22@gmx.ch
+            </p>
+        </body>
+        </html>
+        `,
+    });
+    return c.json({
+      data,
+      error
+    })
+  } catch (error) {
+    return c.json({error: 'Faild to send the email'}, 500)
+  }
+})
 
 const updateRoleSchema = z.object({
   userId: z.string(),

@@ -2,14 +2,15 @@
 
 import MobileSubmissionDetailsPage from "@/components/tournament/MobileSubmissionDetailsPage";
 
-export default function StaffSubmissionDetails() {
+// PublicSubmissionDetails.tsx
+export default function PublicSubmissionDetails() {
   return (
     <MobileSubmissionDetailsPage
       options={{
-        useParams: false,
-        useStore: true,
-        enableEdit: true,
-        enableStatusUpdate: true,
+        useParams: true,
+        useStore: false,
+        enableEdit: false,
+        enableStatusUpdate: false,
         enableHistory: false,
       }}
     />

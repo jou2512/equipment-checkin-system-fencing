@@ -1,22 +1,27 @@
-
-
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { account } from '@/lib/appwrite/config';
-import { ID, Models } from 'appwrite';
+import { ID, Models, AppwriteException } from 'appwrite';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/hooks/use-toast';
+
+// Constants
+const USER_QUERY_KEY = ['user'] as const;
+const SESSION_STORAGE_KEY = 'lastActiveSession';
+const STALE_TIME = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Type definitions for user profile and preferences
  */
+export type PreferredWeapon = 'epee' | 'foil' | 'sabre';
+
 export interface UserPreferences {
-    role: string,
-  nationality?: string;
-  preferredWeapon?: 'epee' | 'foil' | 'sabre';
-  onboardingCompleted?: boolean;
+  role: string;
+  nationalityCode?: string | null;
+  weapon?: PreferredWeapon | null;
+  onboardingCompleted: boolean;
   language?: string;
-  notificationSettings?: {
+  notificationSettings: {
     email: boolean;
     push: boolean;
   };
@@ -28,14 +33,63 @@ export interface UserProfile extends Models.User<UserPreferences> {
 }
 
 /**
- * Local authentication state interface
+ * Authentication error types
  */
-interface AuthState {
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  sessionId: string | null;
-  setSession: (sessionId: string | null) => void;
+export enum AuthErrorType {
+  INVALID_CREDENTIALS = 'invalid_credentials',
+  EMAIL_EXISTS = 'email_exists',
+  NETWORK_ERROR = 'network_error',
+  UNKNOWN = 'unknown',
 }
+
+export class AuthError extends Error {
+  constructor(
+    public type: AuthErrorType,
+    message: string,
+    public originalError?: Error
+  ) {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
+
+/**
+ * Helper functions for error handling
+ */
+const handleAuthError = (error: unknown): AuthError => {
+  if (error instanceof AppwriteException) {
+    switch (error.code) {
+      case 401:
+        return new AuthError(
+          AuthErrorType.INVALID_CREDENTIALS,
+          'Invalid email or password'
+        );
+      case 409:
+        return new AuthError(
+          AuthErrorType.EMAIL_EXISTS,
+          'An account with this email already exists'
+        );
+      default:
+        return new AuthError(
+          AuthErrorType.UNKNOWN,
+          error.message,
+          error
+        );
+    }
+  }
+  
+  if (error instanceof Error && error.message.includes('network')) {
+    return new AuthError(
+      AuthErrorType.NETWORK_ERROR,
+      'Network connection error. Please check your internet connection.'
+    );
+  }
+
+  return new AuthError(
+    AuthErrorType.UNKNOWN,
+    'An unexpected error occurred'
+  );
+};
 
 /**
  * Hook for initializing authentication state
@@ -46,20 +100,27 @@ export function useInitAuth() {
   const router = useRouter();
 
   useEffect(() => {
+    const lastSessionId = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    
     const fetchUser = async () => {
       try {
         const user = await account.get();
-        console.log(user)
-        queryClient.setQueryData(['user'], user);
-      } catch {
-        queryClient.setQueryData(['user'], null);
-
-        // router.push('/login');
+        queryClient.setQueryData(USER_QUERY_KEY, user);
+        sessionStorage.setItem(SESSION_STORAGE_KEY, user.$id);
+      } catch (error) {
+        queryClient.setQueryData(USER_QUERY_KEY, null);
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+        
+        // Only redirect to login if there was a previous session
+        if (lastSessionId) {
+          router.push('/login');
+        }
       }
     };
 
-    // Initial session check
-    fetchUser();
+    if (lastSessionId) {
+      fetchUser();
+    }
 
     return () => {
       // Cleanup if needed
@@ -74,119 +135,224 @@ export function useAuth() {
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  // Get current user
+  // Get current user with proper typing
   const {
     data: user,
     isLoading,
     error
-  } = useQuery({
-    queryKey: ['user'],
-    queryFn: () => account.get(),
-    retry: false,
-    staleTime: 5 * 60 * 1000 // Consider user data fresh for 5 minutes
+  } = useQuery<UserProfile, AuthError>({
+    queryKey: USER_QUERY_KEY,
+    queryFn: async () => {
+      try {
+        return await account.get();
+      } catch (error) {
+        throw handleAuthError(error);
+      }
+    },
+    retry: (failureCount, error) => {
+      // Only retry network errors, up to 3 times
+      return error.type === AuthErrorType.NETWORK_ERROR && failureCount < 3;
+    },
+    staleTime: STALE_TIME
   });
+
+  // Default preferences
+  const defaultPreferences: UserPreferences = {
+    role: 'user',
+    onboardingCompleted: false,
+    notificationSettings: {
+      email: true,
+      push: false,
+    }
+  };
 
   // Sign in mutation
   const signIn = useMutation({
     mutationFn: async ({ email, password }: { email: string; password: string }) => {
-      await account.createEmailPasswordSession(email, password);
-      return account.get();
+      try {
+        await account.createEmailPasswordSession(email, password);
+        return await account.get();
+      } catch (error) {
+        throw handleAuthError(error);
+      }
     },
     onSuccess: async (user) => {
-      // Check user preferences
-      const prefs = await account.getPrefs();
-
-      // Route based on onboarding status
-      if (!prefs.onboardingComplete) {
-        await queryClient.setQueryData(['user'], user);
-        queryClient.invalidateQueries({ queryKey: ['user'] })
-        toast({
-          title: "Login Successful",
-          description: "Pleas Complete the Onboarding!",
-        });
-        router.push("/onboarding");
-      } else {
-        await queryClient.setQueryData(['user'], user);
-        queryClient.invalidateQueries({ queryKey: ['user'] })
-        toast({
-          title: "Login Successful",
-          description: "Welcome back!",
-        });
+      try {
+        const prefs = await account.getPrefs();
+        await queryClient.setQueryData(USER_QUERY_KEY, user);
+        sessionStorage.setItem(SESSION_STORAGE_KEY, user.$id);
+        
+        if (!prefs.onboardingCompleted) {
+          toast({
+            title: "Login Successful",
+            description: "Please Complete the Onboarding!",
+          });
+          router.push("/onboarding");
+        } else {
+          toast({
+            title: "Welcome back!",
+            description: `Signed in as ${user.name}`,
+          });
+         const returnUrl = localStorage.getItem('returnUrl') || '/profile';
+         localStorage.removeItem('returnUrl');
+         router.push(returnUrl);
+        }
+      } catch (error) {
+        // Handle preference fetching error
+        console.error('Error fetching preferences:', error);
         router.push('/profile');
       }
     },
-    onError: (error) => {
+    onError: (error: AuthError) => {
       toast({
         variant: "destructive",
         title: "Sign in failed",
-        description: error instanceof Error ? error.message : "Please try again",
+        description: error.message,
       });
     }
   });
 
   // Sign up mutation
   const signUp = useMutation({
-    mutationFn: async ({ email, password, name }: { email: string; password: string; name: string }) => {
-      // Create user account
-      await account.create(ID.unique(), email, password, name);
-      // Create session
-      await account.createEmailPasswordSession(email, password);
-      return account.get();
+    mutationFn: async ({
+      email,
+      password,
+      first_name,
+      last_name,
+      role,
+    }: {
+      email: string;
+      password: string;
+      first_name: string;
+      last_name: string;
+      role: string;
+    }) => {
+      try {
+        // Create user account
+        const user = await account.create(ID.unique(), email, password, `${first_name} ${last_name}`);
+
+        // Create session
+        await account.createEmailPasswordSession(email, password);
+
+        // Send verification email
+        await account.createVerification(`${window.location.origin}/verify/email`);
+
+        // Update preferences
+        await account.updatePrefs({
+          role,
+          name: `${first_name} ${last_name}`,
+          onboardingComplete: role !== "fencer",
+        });
+
+        return user;
+      } catch (error) {
+        throw handleAuthError(error);
+      }
     },
-    onSuccess: (user) => {
-      queryClient.setQueryData(['user'], user);
-      queryClient.invalidateQueries({ queryKey: ['user'] })
-      toast({ title: "Welcome!" });
-      router.push('/profile');
+  onSuccess: async (user, { role }) => {
+    try {
+      queryClient.setQueryData(USER_QUERY_KEY, user);
+      sessionStorage.setItem(SESSION_STORAGE_KEY, user.$id);
+      toast({
+        title: "Registration Successful",
+        description: "Please check your email to verify your account.",
+      });
+      //await updateUserRole(user.$id, role);
+
+    } catch (error) {
+      console.error('Post-registration error:', error);
+    }
+  },
+  onError: (error: AuthError) => {
+    toast({
+      variant: "destructive",
+      title: "Registration Failed",
+      description: error.message,
+    });
+  }
+});
+
+
+  // Sign out mutation
+  const signOut = useMutation({
+    mutationFn: async () => {
+      try {
+        await account.deleteSession('current');
+      } catch (error) {
+        throw handleAuthError(error);
+      }
     },
-    onError: (error) => {
+    onSuccess: () => {
+      queryClient.setQueryData(USER_QUERY_KEY, null);
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      router.push('/login');
+      toast({ title: "Signed out successfully" });
+    },
+    onError: (error: AuthError) => {
       toast({
         variant: "destructive",
-        title: "Sign up failed",
-        description: error instanceof Error ? error.message : "Please try again",
+        title: "Sign out failed",
+        description: error.message,
       });
     }
   });
 
-  // Sign out mutation
-  const signOut = useMutation({
-    mutationFn: () => account.deleteSession('current'),
-    onSuccess: () => {
-      queryClient.setQueryData(['user'], null);
-      router.push('/login');
-      toast({ title: "Signed out successfully" });
-    }
-  });
-
-  // Update preferences mutation
+  // Update preferences mutation with optimistic updates
   const updatePreferences = useMutation({
     mutationFn: async (preferences: Partial<UserPreferences>) => {
-      const currentPrefs = (user && user.prefs) || {};
-      const newPrefs = {
-        ...currentPrefs,
-        ...preferences
-      };
-      
-      await account.updatePrefs(newPrefs);
-      return newPrefs;
+      try {
+        const currentPrefs = (user?.prefs || defaultPreferences);
+        const newPrefs = {
+          ...currentPrefs,
+          ...preferences
+        };
+        
+        return await account.updatePrefs(newPrefs);
+      } catch (error) {
+        throw handleAuthError(error);
+      }
     },
-    onSuccess: (newPrefs) => {
-      // Update local user data
-      queryClient.setQueryData(['user'], (old: UserProfile | null) => 
-        old ? { ...old, prefs: newPrefs } : old
-      );
+    onMutate: async (newPreferences) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({queryKey: USER_QUERY_KEY});
+
+      // Snapshot the previous value
+      const previousUser = queryClient.getQueryData<UserProfile>(USER_QUERY_KEY);
+
+      // Optimistically update to the new value
+      if (previousUser) {
+        queryClient.setQueryData<UserProfile>(USER_QUERY_KEY, {
+          ...previousUser,
+          prefs: {
+            ...previousUser.prefs,
+            ...newPreferences
+          }
+        });
+      }
+
+      return { previousUser };
+    },
+    onError: (error: AuthError, _, context) => {
+      // Rollback to the previous value on error
+      if (context?.previousUser) {
+        queryClient.setQueryData(USER_QUERY_KEY, context.previousUser);
+      }
       
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: error.message,
+      });
+    },
+    onSuccess: () => {
       toast({
         title: "Preferences updated",
         description: "Your changes have been saved.",
       });
     },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Update failed",
-        description: error instanceof Error ? error.message : "Please try again",
-      });
+    onSettled: () => {
+      // Always refetch after error or success
+      queryClient.invalidateQueries({queryKey: USER_QUERY_KEY});
     },
   });
 
@@ -203,8 +369,28 @@ export function useAuth() {
         title: "Welcome aboard!",
         description: "Your profile setup is complete.",
       });
+      const returnUrl = localStorage.getItem('returnUrl') || '/profile';
+      localStorage.removeItem('returnUrl');
+      router.push(returnUrl);
     },
   });
+
+  // finish the user setrole with mutation
+  const updateUserRole = async (userId: string, role: string) => {
+    const response = await fetch("/api/users/setUserRole", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer honoiscool",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ userId, role }),
+    });
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || "Failed to update user role");
+    }
+  };
 
   return {
     user,

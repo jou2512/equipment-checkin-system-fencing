@@ -17,129 +17,136 @@ import {
 } from "@/components/ui/form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Edit, ChevronRight, Users } from "lucide-react";
 import Link from "next/link";
-import { Edit, ChevronRight, LogOut, Users } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 // Hooks
 import { useAuth } from "@/hooks/use-auth";
 import { useTeamMemberships } from "@/hooks/use-team-memberships";
-import { usePathname } from "next/navigation";
+
+// Constants
+const WEAPONS = ["epee", "foil", "sabre"] as const;
 
 // Validation Schema
 const profileSchema = z.object({
-  preferredWeapon: z
-    .enum(["epee", "foil", "sabre"])
-    .optional(),
+  preferredWeapon: z.enum(WEAPONS).optional().nullable(),
   nationality: z
     .string()
     .length(3, { message: "Nationality code must be 3 characters" })
-    .regex(/^[A-Z]{3}$/, { message: "Nationality code must be uppercase letters" })
-    .optional(),
+    .regex(/^[A-Z]{3}$/, {
+      message: "Nationality code must be uppercase letters",
+    })
+    .optional()
+    .nullable(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
+// Helper function to safely get user preferences
+const getUserPreference = (
+  user: any,
+  key: string,
+  defaultValue: string = "Not Set"
+) => {
+  if (!user?.prefs) return defaultValue;
+  const value = user.prefs[key];
+  return value ? value : defaultValue;
+};
+
+// Helper function to format weapon name
+const formatWeaponName = (weapon: string | null | undefined) => {
+  if (!weapon) return "Not Set";
+  return weapon.charAt(0).toUpperCase() + weapon.slice(1);
+};
+
 export default function ProfileDashboard() {
-  const pathname = usePathname()
-
-  // Authentication and Profile Management
-  const { 
-    user, 
-    isAuthenticated, 
-    signOut, 
-    updatePreferences 
-  } = useAuth();
-
-  // Team Memberships
-  const { 
-    memberships, 
-    isLoading: isLoadingMemberships, 
-    isError: isMembershipsError 
-  } = useTeamMemberships();
-
-  // State Management
+  const pathname = usePathname();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Form Initialization
+  // Auth and Profile Management
+  const { user, isAuthenticated, updatePreferences } = useAuth();
+
+  // Team Memberships
+  const {
+    memberships = [],
+    isLoading: isLoadingMemberships,
+    isError: isMembershipsError,
+  } = useTeamMemberships();
+
+  // Form Setup
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      preferredWeapon: user?.prefs?.preferredWeapon,
-      nationality: user?.prefs?.nationality,
+      preferredWeapon: null,
+      nationality: null,
     },
   });
 
-  // Sync form with user data on load
+  // Sync form with user data
   useEffect(() => {
-    if (user) {
-      console.log(user)
+    if (user?.prefs) {
       form.reset({
-        preferredWeapon: user.prefs?.preferredWeapon,
-        nationality: user.prefs?.nationality,
+        preferredWeapon: user.prefs.weapon || null,
+        nationality: user.prefs.nationalityCode || null,
       });
     }
   }, [user, form]);
 
-  // Form Submission Handler
   const onSubmit = async (data: ProfileFormData) => {
     setIsLoading(true);
     try {
-      // Update user preferences
       await updatePreferences.mutateAsync({
-        preferredWeapon: data.preferredWeapon,
-        nationality: data.nationality,
+        weapon: data.preferredWeapon,
+        nationalityCode: data.nationality,
       });
-      
       setIsEditing(false);
     } catch (error) {
-      console.error("Profile update failed", error);
+      console.error("Profile update failed:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle Sign Out
-  const handleSignOut = () => {
-    signOut.mutate();
-  };
-
-  // Prevent rendering if not authenticated
-  if (!isAuthenticated) {
-    return null;
-  }
+  if (!isAuthenticated) return null;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Profile Card */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex flex-col items-center justify-between space-x-4 mb-6">
-            <div className="flex flex-row items-center space-x-4">
-              <Avatar className="w-20 h-20">
-                <AvatarImage
-                  src="/placeholder-avatar.jpg"
-                  alt="Profile picture"
-                />
-                <AvatarFallback>{user?.name?.charAt(0) || "?"}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h2 className="text-2xl font-bold">
-                  {user?.name || "Profile"}
-                </h2>
-                <p className="text-gray-500">{user?.email || "No email"}</p>
-              </div>
+          <div className="flex flex-col items-center space-y-4 mb-6">
+            <Avatar className="w-20 h-20">
+              <AvatarImage
+                src="/placeholder-avatar.jpg"
+                alt={user?.name || "Profile picture"}
+              />
+              <AvatarFallback>
+                {user?.name?.charAt(0)?.toUpperCase() || "?"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="text-center">
+              <h2 className="text-2xl font-bold">{user?.name || "Profile"}</h2>
+              <p className="text-muted-foreground">
+                {user?.email || "No email available"}
+              </p>
+              {user && (
+                <span
+                  className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
+                    user.emailVerification
+                      ? "bg-green-500 text-white"
+                      : "bg-red-500 text-white"
+                  }`}
+                >
+                  {user.emailVerification
+                    ? "Email Verified"
+                    : "Email Not Verified"}
+                </span>
+              )}
             </div>
-            {/* <Button
-              variant="destructive"
-              onClick={handleSignOut}
-              className="flex items-center"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
-            </Button> */}
           </div>
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {isEditing ? (
@@ -153,17 +160,15 @@ export default function ProfileDashboard() {
                         <FormControl>
                           <select
                             {...field}
+                            value={field.value || ""}
                             className="w-full p-2 border rounded"
                           >
                             <option value="">Select Weapon</option>
-                            {(["epee", "foil", "sabre"] as const).map(
-                              (weapon) => (
-                                <option key={weapon} value={weapon}>
-                                  {weapon?.charAt(0)?.toUpperCase() +
-                                    weapon?.slice(1)}
-                                </option>
-                              )
-                            )}
+                            {WEAPONS.map((weapon) => (
+                              <option key={weapon} value={weapon}>
+                                {formatWeaponName(weapon)}
+                              </option>
+                            ))}
                           </select>
                         </FormControl>
                         <FormMessage />
@@ -179,8 +184,10 @@ export default function ProfileDashboard() {
                         <FormControl>
                           <Input
                             {...field}
+                            value={field.value || ""}
                             placeholder="Enter 3-letter country code"
                             maxLength={3}
+                            className="uppercase"
                           />
                         </FormControl>
                         <FormMessage />
@@ -207,17 +214,13 @@ export default function ProfileDashboard() {
                       Preferred Weapon
                     </p>
                     <p className="font-medium">
-                      {user?.prefs?.weapon
-                        ? user.prefs.weapon.charAt(0).toUpperCase() +
-                          user.prefs.weapon.slice(1)
-                        : "Not Set"}
+                      {formatWeaponName(getUserPreference(user, "weapon"))}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Nationality</p>
                     <p className="font-medium">
-                      {(user?.prefs?.nationalityCode as string).toUpperCase() ||
-                        "Not Set"}
+                      {getUserPreference(user, "nationalityCode")}
                     </p>
                   </div>
                   <Button
@@ -233,13 +236,15 @@ export default function ProfileDashboard() {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Memberships Card */}
       <Card>
         <CardHeader>
           <CardTitle>Tournament Memberships</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoadingMemberships ? (
-            <p className="text-center text-gray-500 py-4">
+            <p className="text-center text-muted-foreground py-4">
               Loading memberships...
             </p>
           ) : isMembershipsError ? (
@@ -247,7 +252,7 @@ export default function ProfileDashboard() {
               Failed to load memberships
             </p>
           ) : memberships.length === 0 ? (
-            <p className="text-center text-gray-500 py-4">
+            <p className="text-center text-muted-foreground py-4">
               No tournament memberships
             </p>
           ) : (
@@ -255,16 +260,14 @@ export default function ProfileDashboard() {
               {memberships.map((membership) => (
                 <li
                   key={membership.$id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                  className="flex items-center justify-between p-4 bg-muted/50 rounded-lg"
                 >
                   <div className="flex-grow">
                     <div className="flex justify-between items-center">
                       <h3 className="font-semibold">
                         {membership.tournament?.name || "Unknown Tournament"}
                       </h3>
-                      <Badge variant="secondary" className="ml-2">
-                        {membership.role}
-                      </Badge>
+                      <Badge variant="secondary">{membership.role}</Badge>
                     </div>
                     <div className="flex items-center space-x-2 mt-1">
                       <span className="text-xs text-muted-foreground">
@@ -290,9 +293,10 @@ export default function ProfileDashboard() {
           )}
         </CardContent>
       </Card>
+
       {/* Join Tournament Button */}
       <Button asChild className="w-full" variant="outline">
-        <Link href={`${pathname?.replace("account","")}/join`}>
+        <Link href={`${pathname?.replace("account", "")}/join`}>
           <Users className="mr-2 h-4 w-4" />
           Join New Tournament
         </Link>

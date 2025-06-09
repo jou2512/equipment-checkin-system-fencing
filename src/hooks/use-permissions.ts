@@ -3,7 +3,6 @@ import { account } from '@/lib/appwrite/config';
 import { useTournamentContext } from '@/contexts/tournament-context';
 import { toast } from './use-toast';
 import { useCallback } from 'react';
-import { client } from '@/lib/hono/hono-client';
 
 // Define role permissions structure
 export const ROLE_PERMISSIONS = {
@@ -39,31 +38,34 @@ export function usePermissions() {
   const { data: membership, isLoading } = useQuery({
     queryKey: ['teamMembership', currentTournament?.$id],
     queryFn: async () => {
-      if (!currentTournament?.$id) return null;
-      
-      try {
-        const currentUser = await account.get();
-        const response = await client.api.teams.memberships.$post({
-          json: {
-            teamId: currentTournament.$id,
-            userId: currentUser.$id
-          }
-        });
+        if (!currentTournament?.$id) return null;
         
-        const data = await response.json();
-        if (!data.success) {
-           // @ts-expect-error
-          throw new Error(data.error || 'Failed to fetch membership');
+        try {
+          const currentUser = await account.get();
+          const response = await fetch('/api/teams/memberships', {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer honoiscool',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              teamId: currentTournament.$id,
+              userId: currentUser.$id
+            })
+          });
+          
+          const data = await response.json();
+          if (!data.success) {
+            throw new Error(data.error || 'Failed to fetch membership');
+          }
+          return data.memberships.find(
+            (m: any) => m.userId === currentUser.$id
+          ) || null;
+        } catch (error) {
+          console.error('Failed to fetch team membership:', error);
+          return null;
         }
-         // @ts-expect-error
-        return data.memberships.find(
-          (m: any) => m.userId === currentUser.$id
-        ) || null;
-      } catch (error) {
-        console.error('Failed to fetch team membership:', error);
-        return null;
-      }
-    },
+      },
     enabled: !!currentTournament?.$id
   });
 
@@ -71,19 +73,23 @@ export function usePermissions() {
   const { data: allMembers } = useQuery({
     queryKey: ['teamMembers', currentTournament?.$id],
     queryFn: async () => {
-      if (!currentTournament?.$id) return [];
-      
-      const response = await client.api.teams.listMembers.$post({
-        json: { teamId: currentTournament.$id }
-      });
-      
-      const data = await response.json();
-      if (!data.success) { // @ts-expect-error
-        throw new Error(data.error || 'Failed to fetch team members');
-      }
-       // @ts-expect-error
-      return data.memberships;
+  if (!currentTournament?.$id) return [];
+  
+  const response = await fetch('/api/teams/listMembers', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer honoiscool',
+      'Content-Type': 'application/json'
     },
+    body: JSON.stringify({ teamId: currentTournament.$id })
+  });
+  
+  const data = await response.json();
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to fetch team members');
+  }
+  return data.memberships;
+},
     enabled: !!currentTournament?.$id
   });
 
@@ -113,16 +119,21 @@ export function usePermissions() {
     }
 
     try {
-      const response = await client.api.teams.updateMember.$post({
-        json: {
+      const response = await fetch('/api/teams/updateMember', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer honoiscool',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           teamId: currentTournament.$id,
           memberId,
           roles
-        }
+        })
       });
 
       const data = await response.json();
-      if (!data.success) { // @ts-expect-error
+      if (!data.success) {
         throw new Error(data.error || 'Failed to update member roles');
       }
 

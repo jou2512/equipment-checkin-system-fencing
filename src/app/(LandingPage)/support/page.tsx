@@ -1,4 +1,6 @@
-import { Metadata } from "next";
+"use client";
+
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -9,10 +11,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { HelpCircle, Mail, MessageCircle, Phone } from "lucide-react";
+import { HelpCircle, Mail, Phone } from "lucide-react";
 import Link from "next/link";
-import { sendSupportEmail } from "@/lib/resend/resend_config";
+import {
+  sendSupportEmail,
+  sendCustomerConfirmationEmail,
+} from "@/lib/resend/resend_config";
 import { useState } from "react";
+import { toast } from "@/hooks/use-toast";
 
 export default function SupportPage() {
   const [name, setName] = useState("");
@@ -66,30 +72,11 @@ export default function SupportPage() {
       <div className="grid gap-6 lg:gap-8 grid-cols-1 md:grid-cols-2">
         {/* Contact Methods */}
         <div className="space-y-4 md:space-y-6">
-          {/* Live Chat */}
-          {/* <Card className="transition-all duration-200 hover:shadow-md">
-            <CardHeader className="space-y-1">
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <MessageCircle className="h-5 w-5" />
-                Live Chat
-              </CardTitle>
-              <CardDescription className="text-sm md:text-base">
-                Chat with our support team in real-time.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full md:w-auto" size="lg">
-                Start Chat
-              </Button>
-            </CardContent>
-          </Card> */}
-
           {/* Email Support */}
           <Card className="transition-all duration-200 hover:shadow-md">
             <CardHeader className="space-y-1">
               <CardTitle className="flex items-center gap-2 text-xl">
-                <Mail className="h-5 w-5" />
-                Email Support
+                <Mail className="h-5 w-5" /> Email Support
               </CardTitle>
               <CardDescription className="text-sm md:text-base">
                 Send us an email and we'll respond within 24 hours.
@@ -97,7 +84,7 @@ export default function SupportPage() {
             </CardHeader>
             <CardContent>
               <Link
-                href="mailto:support@fecs.com"
+                href="mailto:support@fencing-equipement-cs.com"
                 className="text-primary hover:underline text-lg"
               >
                 support@fencing-equipement-cs.com
@@ -109,8 +96,7 @@ export default function SupportPage() {
           <Card className="transition-all duration-200 hover:shadow-md">
             <CardHeader className="space-y-1">
               <CardTitle className="flex items-center gap-2 text-xl">
-                <Phone className="h-5 w-5" />
-                Phone Support (Private number)
+                <Phone className="h-5 w-5" /> Phone Support
               </CardTitle>
               <CardDescription className="text-sm md:text-base">
                 Available most of the time, but email is better
@@ -134,7 +120,7 @@ export default function SupportPage() {
               Send us a message
             </CardTitle>
             <CardDescription className="text-sm md:text-base">
-              Fill out the form below and I'll get back to you as soon as
+              Fill out the form below and we'll get back to you as soon as
               possible.
             </CardDescription>
           </CardHeader>
@@ -163,6 +149,7 @@ export default function SupportPage() {
                   className="h-11"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -175,6 +162,7 @@ export default function SupportPage() {
                   className="min-h-[120px] resize-y"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
+                  required
                 />
               </div>
               {error && (
@@ -199,7 +187,6 @@ export default function SupportPage() {
           </CardContent>
         </Card>
       </div>
-
       {/* FAQ Section */}
       <div className="mt-12 space-y-6">
         <h2 className="text-2xl md:text-3xl font-bold">

@@ -14,39 +14,23 @@ import {
   Projector,
   BarChart,
   List,
-  Tag,
+  ShieldEllipsisIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 
-// Navigation configurations remain the same
 const NAVIGATION_CONFIG = {
-  public: [
-    {
-      href: "equipment-submission",
-      icon: Tag,
-      label: "Check-In",
-      requireAuth: false,
-    },
-    { href: "submissions", icon: List, label: "List", requireAuth: false },
-    {
-      href: "display-board",
-      icon: Projector,
-      label: "Display",
-      requireAuth: false,
-    },
-  ],
   profile: [
-    { href: "/profile", icon: Home, label: "Home", requireAuth: false },
+    { href: "/profile", icon: Home, label: "Home", requireAuth: true },
     {
       href: "/profile/account",
       icon: User,
       label: "Profile",
       requireAuth: true,
     },
-    { href: "/profile/join", icon: Award, label: "Join", requireAuth: true },
+    { href: "/profile/join", icon: Award, label: "Join", requireAuth: false },
   ],
   tournament: {
     participant: [
@@ -67,8 +51,8 @@ const NAVIGATION_CONFIG = {
     "checkin-staff": [
       {
         href: "equipment-submission",
-        icon: Tag,
-        label: "Check-In",
+        icon: Package,
+        label: "Equipment",
         requireAuth: true,
       },
       {
@@ -104,7 +88,6 @@ const NAVIGATION_CONFIG = {
       },
     ],
   },
-  admin: [],
 };
 
 interface NavItemProps {
@@ -140,12 +123,9 @@ export function MobileNavigation() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname() ?? "";
   const params = useParams();
-  const isPublicRoute = pathname.startsWith("/public_");
-  const { user, isLoading, signOut } = !isPublicRoute
-    ? useAuth()
-    : { user: null, isLoading: false, signOut: null };
+  const { user, isLoading, signOut } = useAuth();
 
-  // Scroll effect remains the same
+  // Scroll active item into view
   useEffect(() => {
     if (scrollRef.current) {
       const activeItem = scrollRef.current.querySelector(
@@ -163,11 +143,8 @@ export function MobileNavigation() {
     }
   }, [pathname]);
 
-  // Fixed route type detection
+  // Route type detection
   const getRouteTypeAndRole = () => {
-    if (pathname.startsWith("/public_")) {
-      return { type: "public" as const, role: null };
-    }
     if (pathname.startsWith("/admin")) {
       return { type: "admin" as const, role: null };
     }
@@ -182,7 +159,7 @@ export function MobileNavigation() {
 
   if (routeType === "admin") return null;
 
-  if (!isPublicRoute && isLoading) {
+  if (isLoading) {
     return (
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t z-50">
         <div className="flex justify-around items-center h-16 px-2">
@@ -202,19 +179,9 @@ export function MobileNavigation() {
         NAVIGATION_CONFIG[routeType].participant
       : NAVIGATION_CONFIG[routeType] ?? [];
 
-  const visibleItems = isPublicRoute
-    ? navItems // Show all items for public routes
-    : navItems.filter(
-        (item) => !item.requireAuth || (item.requireAuth && user)
-      );
-
-  const getCurrentPath = (itemHref: string) => {
-    if (routeType === "public") {
-      return `/public_${itemHref}`;
-    }
-    if (!params?.tournamentId || !params?.role) return itemHref;
-    return `/tournament/${params.tournamentId}/${params.role}/${itemHref}`;
-  };
+  const visibleItems = navItems.filter(
+    (item) => !item.requireAuth || (item.requireAuth && user)
+  );
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t z-50">
@@ -228,20 +195,33 @@ export function MobileNavigation() {
         }}
       >
         <div className="flex px-4 min-w-min">
-          {visibleItems.map((item) => {
-            const currentPath = getCurrentPath(item.href);
-            return (
-              <div key={item.href} data-active={pathname === currentPath}>
-                <NavItem
-                  href={item.href}
-                  icon={item.icon}
-                  label={item.label}
-                  isActive={pathname === currentPath}
-                />
-              </div>
-            );
-          })}
-          {!isPublicRoute && user && (
+          {visibleItems.map((item) => (
+            <div
+              key={item.href}
+              data-active={pathname === getCurrentPath(item.href, params)}
+            >
+              <NavItem
+                href={item.href}
+                icon={item.icon}
+                label={item.label}
+                isActive={pathname === getCurrentPath(item.href, params)}
+              />
+            </div>
+          ))}
+          {user && user.labels?.includes("admin") && (
+            <div
+              key="/admin"
+              data-active={pathname === getCurrentPath("/admin", params)}
+            >
+              <NavItem
+                href="/admin"
+                icon={ShieldEllipsisIcon}
+                label="Admin"
+                isActive={pathname === getCurrentPath("/admin", params)}
+              />
+            </div>
+          )}
+          {user && (
             <Button
               variant="ghost"
               size="sm"
@@ -259,4 +239,10 @@ export function MobileNavigation() {
       </div>
     </nav>
   );
+}
+
+// Helper function to get current path
+function getCurrentPath(href: string, params: any) {
+  if (!params?.tournamentId || !params?.role) return href;
+  return `/tournament/${params.tournamentId}/${params.role}/${href}`;
 }

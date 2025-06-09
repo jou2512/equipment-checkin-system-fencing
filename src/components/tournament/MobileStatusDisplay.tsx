@@ -1,3 +1,4 @@
+// MobileStatusDisplay.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -10,7 +11,6 @@ import {
   DATABASE_IDS,
   COLLECTION_IDS,
 } from "@/lib/appwrite/types";
-import { useTournamentStore } from "@/lib/store/tournament-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Pause, Play } from "lucide-react";
 import { useParams } from "next/navigation";
+import { useTournamentStore } from "@/lib/store/tournament-store";
 
 const READY_STATUSES: CheckInCheckInStatus[] = [
   CheckInCheckInStatus.APPROVED,
@@ -38,21 +39,64 @@ const STATUS_COLORS = {
   in_review: "bg-blue-100 text-blue-800",
 };
 
-export default function MobileStatusDisplay() {
-  const params = useParams();
+interface ScrollConfig {
+  speed: number; // Scroll speed (pixels per step)
+  interval: number; // Time between scroll steps (ms)
+  behavior: "reset" | "bounce"; // Whether to reset to top or bounce back
+}
 
-  const currentTournamentId = params.tournamentId;
+interface MobileStatusDisplayProps {
+  options?: {
+    useParams?: boolean;
+    useStore?: boolean;
+    enableAutoScroll?: boolean;
+    refetchInterval?: number;
+    limit?: number;
+    scroll?: ScrollConfig;
+  };
+}
+
+export default function MobileStatusDisplay({
+  options = {
+    useParams: false,
+    useStore: true,
+    enableAutoScroll: true,
+    refetchInterval: 30000,
+    limit: 100,
+    scroll: {
+      speed: 1,
+      interval: 50,
+      behavior: "bounce",
+    },
+  },
+}: MobileStatusDisplayProps) {
+  // State Management
   const [isPaused, setIsPaused] = useState(false);
   const [activeTab, setActiveTab] = useState<"ready" | "pending">("ready");
+  const [error, setError] = useState<string | null>(null);
+
+  // Refs
   const readyScrollRef = useRef<HTMLDivElement>(null);
   const pendingScrollRef = useRef<HTMLDivElement>(null);
 
-  // Fetch Ready Submissions
-  const { data: readySubmissions, isLoading: isReadyLoading } = useQuery<
-    CheckIn[]
-  >({
-    queryKey: ["mobile-ready-submissions", currentTournamentId],
-    queryFn: async () => {
+  // Tournament ID handling
+  const params = useParams();
+  const currentTournamentId = options.useParams
+    ? params?.tournamentId
+    : options.useStore
+    ? useTournamentStore().currentTournamentId
+    : null;
+
+  // Error handling utility
+  const handleError = (error: any) => {
+    console.error("Error fetching data:", error);
+    setError(error?.message || "An error occurred while fetching data");
+    return [];
+  };
+
+  // Query functions
+  const fetchReadySubmissions = async () => {
+    try {
       const response = await databases.listDocuments(
         DATABASE_IDS.CHECKING_SYSTEM,
         COLLECTION_IDS.CHECKINS,
@@ -61,21 +105,17 @@ export default function MobileStatusDisplay() {
           Query.contains("CheckInStatus", READY_STATUSES),
           Query.equal("pickupConfirmed", false),
           Query.orderDesc("$createdAt"),
-          Query.limit(100),
+          Query.limit(options.limit || 100),
         ]
       );
       return response.documents as CheckIn[];
-    },
-    refetchInterval: 30000,
-    enabled: !!currentTournamentId,
-  });
+    } catch (error) {
+      return handleError(error);
+    }
+  };
 
-  // Fetch Pending Submissions
-  const { data: pendingSubmissions, isLoading: isPendingLoading } = useQuery<
-    CheckIn[]
-  >({
-    queryKey: ["mobile-pending-submissions", currentTournamentId],
-    queryFn: async () => {
+  const fetchPendingSubmissions = async () => {
+    try {
       const response = await databases.listDocuments(
         DATABASE_IDS.CHECKING_SYSTEM,
         COLLECTION_IDS.CHECKINS,
@@ -83,54 +123,123 @@ export default function MobileStatusDisplay() {
           Query.equal("tournaments", currentTournamentId as string),
           Query.contains("CheckInStatus", PENDING_STATUSES),
           Query.orderAsc("checkNumber"),
-          Query.limit(100),
+          Query.limit(options.limit || 100),
         ]
       );
       return response.documents as CheckIn[];
-    },
-    refetchInterval: 30000,
+    } catch (error) {
+      return handleError(error);
+    }
+  };
+
+  // Queries
+  const {
+    data: readySubmissions,
+    isLoading: isReadyLoading,
+    error: readyError,
+  } = useQuery<CheckIn[]>({
+    queryKey: ["mobile-ready-submissions", currentTournamentId],
+    queryFn: fetchReadySubmissions,
+    refetchInterval: options.refetchInterval,
     enabled: !!currentTournamentId,
   });
 
-  // Automatic Scrolling
+  const {
+    data: pendingSubmissions,
+    isLoading: isPendingLoading,
+    error: pendingError,
+  } = useQuery<CheckIn[]>({
+    queryKey: ["mobile-pending-submissions", currentTournamentId],
+    queryFn: fetchPendingSubmissions,
+    refetchInterval: options.refetchInterval,
+    enabled: !!currentTournamentId,
+  });
+
+  // Auto-scroll effect
   useEffect(() => {
-    const readyContainer = readyScrollRef.current;
-    const pendingContainer = pendingScrollRef.current;
+    if (!options.enableAutoScroll || isPaused) return;
 
-    if (
-      !readyContainer ||
-      !pendingContainer ||
-      isPaused ||
-      !readySubmissions ||
-      !pendingSubmissions
-    )
-      return;
+    const scrollSpeed = options.scroll?.speed ?? 1;
+    const scrollInterval = options.scroll?.interval ?? 50;
+    const behavior = options.scroll?.behavior ?? "bounce";
 
-    const scrollAnimation = () => {
-      const activeContainer =
-        activeTab === "ready" ? readyContainer : pendingContainer;
+    // Find the viewport element after component mount
+    const getViewportElement = () => {
+      const containerRef =
+        activeTab === "ready" ? readyScrollRef : pendingScrollRef;
+      return containerRef.current?.querySelector(
+        "[data-radix-scroll-area-viewport]"
+      );
+    };
 
-      if (activeContainer.scrollHeight > activeContainer.clientHeight) {
-        activeContainer.scrollTop += 1;
-        if (
-          activeContainer.scrollTop >=
-          activeContainer.scrollHeight - activeContainer.clientHeight
-        ) {
-          activeContainer.scrollTop = 0;
+    const startScroll = () => {
+      const viewportElement = getViewportElement();
+      if (!viewportElement) return;
+
+      const scrollHeight = viewportElement.scrollHeight;
+      const clientHeight = viewportElement.clientHeight;
+
+      if (scrollHeight <= clientHeight) return; // No need to scroll
+
+      const currentScroll = viewportElement.scrollTop;
+      const maxScroll = scrollHeight - clientHeight;
+
+      if (behavior === "bounce") {
+        // For bounce, we need to track the current direction
+        const currentDirection = viewportElement.getAttribute(
+          "data-scroll-direction"
+        );
+        let newScroll;
+
+        if (!currentDirection || currentDirection === "down") {
+          newScroll = Math.min(currentScroll + scrollSpeed, maxScroll);
+          if (newScroll >= maxScroll) {
+            viewportElement.setAttribute("data-scroll-direction", "up");
+          }
+        } else {
+          newScroll = Math.max(currentScroll - scrollSpeed, 0);
+          if (newScroll <= 0) {
+            viewportElement.setAttribute("data-scroll-direction", "down");
+          }
+        }
+
+        viewportElement.scrollTop = newScroll;
+      } else {
+        // For reset behavior
+        const newScroll = currentScroll + scrollSpeed;
+        if (newScroll >= maxScroll) {
+          viewportElement.scrollTop = 0;
+        } else {
+          viewportElement.scrollTop = newScroll;
         }
       }
     };
 
-    const scrollInterval = setInterval(scrollAnimation, 50);
-    return () => clearInterval(scrollInterval);
-  }, [readySubmissions, pendingSubmissions, isPaused, activeTab]);
+    const scrollIntervalId = setInterval(startScroll, scrollInterval);
 
-  // Toggle Pause
-  const togglePause = () => {
-    setIsPaused(!isPaused);
-  };
+    return () => {
+      clearInterval(scrollIntervalId);
+      // Clean up the direction attribute
+      const viewport = getViewportElement();
+      viewport?.removeAttribute("data-scroll-direction");
+    };
+  }, [
+    activeTab,
+    isPaused,
+    options.enableAutoScroll,
+    options.scroll?.behavior,
+    options.scroll?.interval,
+    options.scroll?.speed,
+  ]);
 
-  // Loading State
+  // Error handling
+  useEffect(() => {
+    if (readyError || pendingError) {
+      setError((readyError || pendingError)?.message || "An error occurred");
+    }
+  }, [readyError, pendingError]);
+
+  // Loading and error states
   if (isReadyLoading || isPendingLoading) {
     return (
       <div className="flex items-center justify-center h-screen text-xl">
@@ -139,17 +248,31 @@ export default function MobileStatusDisplay() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen text-xl text-red-500">
+        {error}
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen w-full flex flex-col p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Status Display</h1>
-        <Button variant="outline" size="icon" onClick={togglePause}>
-          {isPaused ? (
-            <Play className="h-4 w-4" />
-          ) : (
-            <Pause className="h-4 w-4" />
-          )}
-        </Button>
+        {options.enableAutoScroll && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIsPaused(!isPaused)}
+          >
+            {isPaused ? (
+              <Play className="h-4 w-4" />
+            ) : (
+              <Pause className="h-4 w-4" />
+            )}
+          </Button>
+        )}
       </div>
 
       <Tabs
@@ -161,9 +284,9 @@ export default function MobileStatusDisplay() {
           <TabsTrigger value="pending">Pending</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="ready">
-          <ScrollArea ref={readyScrollRef} className="h-[calc(100vh-150px)]">
-            <div className="space-y-4">
+        <TabsContent value="ready" className="h-[calc(100vh-150px)]">
+          <ScrollArea ref={readyScrollRef} className="h-full" type="always">
+            <div className="space-y-4 px-4">
               {readySubmissions?.length ? (
                 readySubmissions.map((submission) => (
                   <Card key={submission.$id}>
@@ -201,9 +324,9 @@ export default function MobileStatusDisplay() {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="pending">
-          <ScrollArea ref={pendingScrollRef} className="h-[calc(100vh-150px)]">
-            <div className="space-y-4">
+        <TabsContent value="pending" className="h-[calc(100vh-150px)]">
+          <ScrollArea ref={pendingScrollRef} className="h-full" type="always">
+            <div className="space-y-4 px-4">
               {pendingSubmissions?.length ? (
                 pendingSubmissions.map((submission) => (
                   <Card key={submission.$id}>

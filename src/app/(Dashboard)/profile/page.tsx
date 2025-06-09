@@ -54,7 +54,7 @@ export default function HomePage() {
               Your Profile
             </CardTitle>
             <CardDescription>
-              View and manage your fencing profile
+              View and manage your profile
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -71,7 +71,7 @@ export default function HomePage() {
         <CardHeader>
           <CardTitle>Get Started</CardTitle>
           <CardDescription>
-            Begin your fencing journey with us today
+            Begin your journey with us today
           </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center space-x-4">
@@ -79,7 +79,7 @@ export default function HomePage() {
             <Link href="/profile/join">Join a Tournament</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/profil/account">View Your Profile</Link>
+            <Link href="/profile/account">View Your Profile</Link>
           </Button>
         </CardContent>
       </Card>

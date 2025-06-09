@@ -15,77 +15,147 @@ import {
 import { useTournamentStore } from "@/lib/store/tournament-store";
 import { useTournaments } from "@/hooks/use-tournaments";
 import { toast } from "@/hooks/use-toast";
+import { useCallback, useEffect, useMemo } from "react";
 
 export default function TournamentSelector() {
   const router = useRouter();
   const { currentTournamentId, setCurrentTournamentId } = useTournamentStore();
-  const { tournaments, isLoading, isError } = useTournaments();
+  const { tournaments, isLoading, isError, all } = useTournaments();
 
-  const handleTournamentSelect = (tournamentId: string) => {
-    setCurrentTournamentId(tournamentId);
-    const selectedTournament = tournaments.find((t) => t.$id === tournamentId);
-    if (selectedTournament) {
+  // Memoize current tournament to prevent unnecessary re-renders
+  const currentTournament = useMemo(
+    () => tournaments?.find((t) => t.$id === currentTournamentId),
+    [tournaments, currentTournamentId]
+  );
+
+  // Set initial tournament if none selected
+  useEffect(() => {
+    if (!currentTournamentId && tournaments?.length > 0) {
+      setCurrentTournamentId(tournaments[0].$id as string);
+    }
+  }, [tournaments, currentTournamentId, setCurrentTournamentId]);
+
+  // Memoize handlers to prevent unnecessary re-renders
+  const handleTournamentSelect = useCallback(
+    (tournamentId: string) => {
+      setCurrentTournamentId(tournamentId);
+      const selectedTournament = tournaments?.find(
+        (t) => t.$id === tournamentId
+      );
+      if (selectedTournament) {
+        toast({
+          title: "Tournament Selected",
+          description: `Switched to ${selectedTournament.name}`,
+        });
+      }
+    },
+    [tournaments, setCurrentTournamentId]
+  );
+
+  const handleAddTournament = useCallback(() => {
+    router.push("/admin/tournament-setup");
+  }, [router]);
+
+  const handleRetry = useCallback(async () => {
+    try {
+      await all.refetch();
+    } catch (error) {
       toast({
-        title: "Tournament Selected",
-        description: `Switched to ${selectedTournament.name}`,
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to reload tournaments. Please try again.",
       });
     }
-  };
+  }, [all.refetch]);
 
-  const handleAddTournament = () => {
-    router.push("/admin/tournament-setup");
-  };
-
+  // Loading state
   if (isLoading) {
     return (
-      <Button disabled>
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        Loading tournaments...
-      </Button>
+      <div className="flex items-center space-x-2">
+        <Button disabled variant="outline" className="w-[200px] justify-start">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Loading...
+        </Button>
+        <Button disabled>
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
     );
   }
 
+  // Error state
   if (isError) {
     return (
-      <Button variant="destructive" onClick={() => window.location.reload()}>
-        Error loading tournaments. Click to retry.
-      </Button>
+      <div className="flex items-center space-x-2">
+        <Button
+          variant="destructive"
+          className="w-[200px]"
+          onClick={handleRetry}
+        >
+          Error loading tournaments
+        </Button>
+        <Button onClick={handleAddTournament}>
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
     );
   }
 
+  // Empty state
   if (!tournaments || tournaments.length === 0) {
-    return <Button onClick={handleAddTournament}>Create a Tournament</Button>;
+    return (
+      <div className="flex items-center space-x-2">
+        <Button variant="outline" className="w-[200px]" disabled>
+          No tournaments available
+        </Button>
+        <Button onClick={handleAddTournament}>
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+    );
   }
 
   return (
     <div className="flex items-center space-x-2">
       <Select
-        value={currentTournamentId as string}
+        value={currentTournamentId as string | undefined}
         onValueChange={handleTournamentSelect}
       >
         <SelectTrigger className="w-[200px]">
-          <SelectValue placeholder="Select tournament" />
+          <SelectValue
+            placeholder="Select tournament"
+            defaultValue={currentTournament?.name}
+          >
+            {currentTournament?.name || "Select tournament"}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
             {tournaments.map((tournament) => (
-              <SelectItem key={tournament.$id} value={tournament.$id as string}>
-                <div className="flex items-center">
-                  <Check
-                    className={`mr-2 h-4 w-4 ${
-                      currentTournamentId === tournament.$id
-                        ? "opacity-100"
-                        : "opacity-0"
-                    }`}
-                  />
-                  {tournament.name}
-                </div>
+              <SelectItem
+                key={tournament.$id}
+                value={tournament.$id as string}
+                className="relative pl-8"
+              >
+                <Check
+                  className={`absolute left-2 h-4 w-4 transition-opacity ${
+                    currentTournamentId === tournament.$id
+                      ? "opacity-100"
+                      : "opacity-0"
+                  }`}
+                  aria-hidden="true"
+                />
+                <span className="truncate">{tournament.name}</span>
               </SelectItem>
             ))}
           </SelectGroup>
         </SelectContent>
       </Select>
-      <Button onClick={handleAddTournament}>
+      <Button
+        onClick={handleAddTournament}
+        variant="outline"
+        title="Add new tournament"
+      >
         <Plus className="h-4 w-4" />
       </Button>
     </div>

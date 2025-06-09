@@ -9,8 +9,6 @@ import {
   Tournament,
   TournamentActiveWeaponsType,
 } from "@/lib/appwrite/types";
-import { RoleType } from "./use-permissions";
-import { client } from "@/lib/hono/hono-client";
 
 // Hook for managing tournaments
 export function useTournaments() {
@@ -21,6 +19,7 @@ export function useTournaments() {
     data: tournaments = [],
     isLoading,
     isError,
+    ...all
   } = useQuery<Tournament[]>({
     queryKey: ["tournaments"],
     queryFn: async () => {
@@ -69,29 +68,27 @@ export function useTournaments() {
         // Get current user details
         const currentUser = await account.get();
 
-        // Create team using Hono endpoint
-        const teamResponse = await client.api.teams.create.$post({
-          json: {
+        // Create team using direct fetch
+        const teamResponse = await fetch("/api/teams/create", {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer honoiscool",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
             tournamentId,
             tournamentName: tournament.name,
             userId: currentUser.$id,
             userEmail: currentUser.email,
             userName: currentUser.name,
             userPhone: currentUser.phone || undefined,
-          },
+          }),
         });
 
         const teamData = await teamResponse.json();
 
         if (!teamData.success) {
-          throw new Error(
-            (
-              teamData as {
-                success: boolean;
-                error: string;
-              }
-            ).error || "Team creation failed"
-          );
+          throw new Error(teamData.error || "Team creation failed");
         }
 
         return {
@@ -123,8 +120,11 @@ export function useTournaments() {
         } catch {}
 
         try {
-          await client.api.teams[":teamId"].$delete({
-            param: { teamId: tournamentId },
+          await fetch(`/api/teams/${tournamentId}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: "Bearer honoiscool",
+            },
           });
         } catch {}
 
@@ -203,6 +203,14 @@ export function useTournaments() {
         COLLECTION_IDS.TOURNAMENTS,
         tournamentId
       );
+      try {
+        await fetch(`/api/teams/${tournamentId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: "Bearer honoiscool",
+          },
+        });
+      } catch {}
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -271,6 +279,7 @@ export function useTournaments() {
     tournaments,
     isLoading,
     isError,
+    all,
     addTournament,
     updateTournament,
     deleteTournament,

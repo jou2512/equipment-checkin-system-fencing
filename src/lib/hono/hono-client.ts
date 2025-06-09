@@ -7,6 +7,3 @@ import { hc } from "hono/client";
             Authorization: `Bearer ${process.env.HONO_API_TOKEN}`,
         },
 }) */
-
-export const client = hc<AppType>();
-

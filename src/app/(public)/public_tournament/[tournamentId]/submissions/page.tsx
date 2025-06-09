@@ -2,16 +2,16 @@
 
 import MobileSubmissionsPage from "@/components/tournament/MobileSubmissionsPage";
 
-export default function StaffSubmissionsPage() {
+export default function PublicSubmissionsPage() {
   return (
     <MobileSubmissionsPage
       options={{
-        useParams: false,
-        useStore: true,
-        enableDelete: true,
+        useParams: true,
+        useStore: false,
+        enableDelete: false,
         pageSize: 100,
         enableNumberSearch: true,
-        enableSelection: true,
+        enableSelection: false,
       }}
     />
   );
