@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fencing Equipment Check System (FECS)
 
-## Getting Started
+FECS is a Next.js and TypeScript application for managing equipment check-ins at fencing tournaments. It offers an admin dashboard for tournament setup, equipment management and status tracking as well as a public interface for fencers.
 
-First, run the development server:
+## Requirements
+
+- Node.js 18 or later
+- npm
+
+## Installation
+
+Clone the repository and install dependencies:
+
+```bash
+npm install
+```
+
+Create a `.env.local` file and provide the following variables:
+
+```
+RESEND_API_KEY=your_api_key
+HONO_API_TOKEN=token_used_for_internal_api
+INVITE_CODE_SECRET=secret_for_invite_codes
+NEXT_PUBLIC_APPWRITE_ENDPOINT=your_appwrite_endpoint
+NEXT_PUBLIC_APPWRITE_PROJECT_ID=project_id
+APPWRITE_FUNCTION_API_ENDPOINT=appwrite_function_endpoint
+APPWRITE_FUNCTION_PROJECT_ID=function_project_id
+APPWRITE_FUNCTION_API_KEY=function_api_key
+```
+
+## Development
+
+Start the development server with:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The application will be available at [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Testing
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Run unit tests using:
 
-## Learn More
+```bash
+npm test
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Production build
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+To create an optimized production build run:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run build
+```
 
-## Deploy on Vercel
+## Features
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Equipment submission and material checks
+- Tournament and equipment management dashboard
+- Status display for check‑in progress
+- Email notifications via Resend
