@@ -1,0 +1,723 @@
+{
+    "projectId": "675b806a0009c79f1598",
+    "projectName": "Fencing equipment check system",
+    "settings": {
+        "services": {
+            "account": true,
+            "avatars": true,
+            "databases": true,
+            "locale": true,
+            "health": true,
+            "storage": true,
+            "teams": true,
+            "users": true,
+            "functions": true,
+            "graphql": true,
+            "messaging": true
+        },
+        "auth": {
+            "methods": {
+                "jwt": true,
+                "phone": true,
+                "invites": true,
+                "anonymous": true,
+                "email-otp": true,
+                "magic-url": true,
+                "email-password": true
+            },
+            "security": {
+                "duration": 31536000,
+                "limit": 0,
+                "sessionsLimit": 10,
+                "passwordHistory": 0,
+                "passwordDictionary": false,
+                "personalDataCheck": false,
+                "sessionAlerts": false,
+                "mockNumbers": []
+            }
+        }
+    },
+    "functions": [
+        {
+            "$id": "Ticketnumber",
+            "execute": [
+                "any"
+            ],
+            "name": "Ticketnumber",
+            "enabled": true,
+            "logging": true,
+            "runtime": "node-22",
+            "scopes": [
+                "users.read"
+            ],
+            "events": [
+                "databases.*.collections.*.documents.*.create"
+            ],
+            "schedule": "",
+            "timeout": 15,
+            "entrypoint": "src/main.js",
+            "commands": "npm install",
+            "path": "functions/Ticketnumber"
+        }
+    ],
+    "databases": [
+        {
+            "$id": "675b83ef00172e714622",
+            "name": "Checking System",
+            "enabled": true
+        }
+    ],
+    "collections": [
+        {
+            "$id": "checkableItems",
+            "$permissions": [
+                "read(\"any\")"
+            ],
+            "databaseId": "675b83ef00172e714622",
+            "name": "checkableItems",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null
+                },
+                {
+                    "key": "forWeapons",
+                    "type": "string",
+                    "required": false,
+                    "array": true,
+                    "elements": [
+                        "epee",
+                        "foil",
+                        "sabre"
+                    ],
+                    "format": "enum",
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "itemconfigs",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "675b83ef00172e714622",
+            "name": "itemConfigs",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "maxQuantity",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "min": 1,
+                    "max": 10,
+                    "default": null
+                },
+                {
+                    "key": "required",
+                    "type": "boolean",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "itemName",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null
+                },
+                {
+                    "key": "tournament",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedCollection": "tournaments",
+                    "relationType": "oneToMany",
+                    "twoWay": true,
+                    "twoWayKey": "itemConfigs",
+                    "onDelete": "setNull",
+                    "side": "child"
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "itemName",
+                    "type": "key",
+                    "status": "available",
+                    "attributes": [
+                        "itemName"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "equipmentTypes",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "675b83ef00172e714622",
+            "name": "equipmentTypes",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null
+                },
+                {
+                    "key": "category",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null
+                },
+                {
+                    "key": "partIds",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedCollection": "equipmentParts",
+                    "relationType": "manyToOne",
+                    "twoWay": true,
+                    "twoWayKey": "equipmentTypeId",
+                    "onDelete": "setNull",
+                    "side": "child"
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "equipmentParts",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "675b83ef00172e714622",
+            "name": "equipmentParts",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null
+                },
+                {
+                    "key": "description",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null
+                },
+                {
+                    "key": "parentPartId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null
+                },
+                {
+                    "key": "equipmentTypeId",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedCollection": "equipmentTypes",
+                    "relationType": "manyToOne",
+                    "twoWay": true,
+                    "twoWayKey": "partIds",
+                    "onDelete": "setNull",
+                    "side": "parent"
+                },
+                {
+                    "key": "possibleDefectIds",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedCollection": "equipmentPartDefects",
+                    "relationType": "manyToMany",
+                    "twoWay": true,
+                    "twoWayKey": "applicablePartIds",
+                    "onDelete": "setNull",
+                    "side": "child"
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "equipmentPartDefects",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "675b83ef00172e714622",
+            "name": "equipmentPartDefects",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null
+                },
+                {
+                    "key": "description",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null
+                },
+                {
+                    "key": "severity",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 32,
+                    "default": null
+                },
+                {
+                    "key": "applicablePartIds",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedCollection": "equipmentParts",
+                    "relationType": "manyToMany",
+                    "twoWay": true,
+                    "twoWayKey": "possibleDefectIds",
+                    "onDelete": "setNull",
+                    "side": "parent"
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "checkinitem",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "675b83ef00172e714622",
+            "name": "checkinitem",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "itemName",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null
+                },
+                {
+                    "key": "quantity",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "min": 0,
+                    "max": 10,
+                    "default": null
+                },
+                {
+                    "key": "checkInDocument",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedCollection": "checkIns",
+                    "relationType": "oneToMany",
+                    "twoWay": true,
+                    "twoWayKey": "itemChecks",
+                    "onDelete": "cascade",
+                    "side": "child"
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "pending",
+                        "in_review",
+                        "approved",
+                        "partially_approved",
+                        "rejected"
+                    ],
+                    "format": "enum",
+                    "default": "pending"
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "tournaments",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "675b83ef00172e714622",
+            "name": "tournaments",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null
+                },
+                {
+                    "key": "itemConfigs",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedCollection": "itemconfigs",
+                    "relationType": "oneToMany",
+                    "twoWay": true,
+                    "twoWayKey": "tournament",
+                    "onDelete": "setNull",
+                    "side": "parent"
+                },
+                {
+                    "key": "activeWeapons",
+                    "type": "string",
+                    "required": false,
+                    "array": true,
+                    "elements": [
+                        "epee",
+                        "foil",
+                        "sabre"
+                    ],
+                    "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "orderCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 0,
+                    "max": 1000,
+                    "default": 0
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "name",
+                    "type": "key",
+                    "status": "available",
+                    "attributes": [
+                        "name"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "time",
+                    "type": "key",
+                    "status": "available",
+                    "attributes": [
+                        "$createdAt"
+                    ],
+                    "orders": [
+                        "DESC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "checkIns",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "675b83ef00172e714622",
+            "name": "checkIns",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "checkNumber",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "min": 0,
+                    "max": 1000,
+                    "default": null
+                },
+                {
+                    "key": "fencerName",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null
+                },
+                {
+                    "key": "nationalityCode",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 32,
+                    "default": null
+                },
+                {
+                    "key": "weaponType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 10,
+                    "default": null
+                },
+                {
+                    "key": "pickupConfirmed",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "tournaments",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedCollection": "tournaments",
+                    "relationType": "manyToOne",
+                    "twoWay": false,
+                    "twoWayKey": "675fb6f3001641cbc6a0",
+                    "onDelete": "setNull",
+                    "side": "parent"
+                },
+                {
+                    "key": "itemChecks",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedCollection": "checkinitem",
+                    "relationType": "oneToMany",
+                    "twoWay": true,
+                    "twoWayKey": "checkInDocument",
+                    "onDelete": "cascade",
+                    "side": "parent"
+                },
+                {
+                    "key": "eventKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null
+                },
+                {
+                    "key": "CheckInStatus",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "pending",
+                        "in_review",
+                        "approved",
+                        "partially_approved",
+                        "rejected"
+                    ],
+                    "format": "enum",
+                    "default": "pending"
+                },
+                {
+                    "key": "submissions",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedCollection": "submissions",
+                    "relationType": "manyToOne",
+                    "twoWay": true,
+                    "twoWayKey": "checkInDocument",
+                    "onDelete": "setNull",
+                    "side": "child"
+                },
+                {
+                    "key": "currentVersion",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 1,
+                    "max": 9223372036854775807,
+                    "default": 1
+                },
+                {
+                    "key": "latestSubmission",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedCollection": "submissions",
+                    "relationType": "oneToOne",
+                    "twoWay": false,
+                    "twoWayKey": "6762f1a000058a02f0b2",
+                    "onDelete": "setNull",
+                    "side": "parent"
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "order_unique",
+                    "type": "unique",
+                    "status": "available",
+                    "attributes": [
+                        "checkNumber",
+                        "eventKey"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "submissions",
+            "$permissions": [],
+            "databaseId": "675b83ef00172e714622",
+            "name": "submissions",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "checkInDocument",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedCollection": "checkIns",
+                    "relationType": "manyToOne",
+                    "twoWay": true,
+                    "twoWayKey": "submissions",
+                    "onDelete": "setNull",
+                    "side": "parent"
+                },
+                {
+                    "key": "checkInKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null
+                },
+                {
+                    "key": "versionNumber",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 1,
+                    "max": 9223372036854775807,
+                    "default": 1
+                },
+                {
+                    "key": "snapshotJson",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100000,
+                    "default": null
+                },
+                {
+                    "key": "changesJson",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100000,
+                    "default": null
+                },
+                {
+                    "key": "action",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "create",
+                        "update",
+                        "revert"
+                    ],
+                    "format": "enum",
+                    "default": "create"
+                },
+                {
+                    "key": "comment",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 10000,
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "check_in_version",
+                    "type": "unique",
+                    "status": "available",
+                    "attributes": [
+                        "checkInKey",
+                        "versionNumber"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "updated_at",
+                    "type": "key",
+                    "status": "available",
+                    "attributes": [
+                        "$updatedAt"
+                    ],
+                    "orders": [
+                        "DESC"
+                    ]
+                }
+            ]
+        }
+    ]
+}
