@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "jsx": "preserve",
+    "isolatedModules": false
+  },
+  "include": ["./*.ts", "./*.tsx"]
+}

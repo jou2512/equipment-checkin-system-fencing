@@ -2,10 +2,9 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@middleware/*": ["middleware/*"]
-    }
+    "outDir": "dist",
+    "rootDir": "src",
+    "baseUrl": "src"
   },
-  "include": ["./**/*"]
+  "include": ["src"]
 }

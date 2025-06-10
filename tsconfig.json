@@ -14,20 +14,22 @@
     "jsx": "preserve",
     "incremental": true,
 
-    // Entsprechende TypeScript-Regeln für deine ESLint-Regeln
-    "noImplicitAny": false, // entspricht @typescript-eslint/no-explicit-any
-    "noUnusedLocals": false, // entspricht @typescript-eslint/no-unused-vars
-    "noUnusedParameters": false, // entspricht @typescript-eslint/no-unused-vars
-    "allowUnreachableCode": true, // weniger strikt mit ungenutztem Code
-    "allowUnusedLabels": true, // weniger strikt mit unused expressions
+    "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "allowUnreachableCode": true,
+    "allowUnusedLabels": true,
 
     "plugins": [
       {
         "name": "next"
       }
     ],
+    "baseUrl": ".", // ← Wichtig für Pfadauflösung
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@fecs/ui": ["packages/ui"],
+      "@fecs/ui/*": ["packages/ui/*"]
     }
   },
   "include": [
@@ -36,11 +38,13 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "scripts/**/*.mts",
-    "middleware/**/*.ts"
-  ],
+    "middleware/**/*.ts",
+    "packages/**/*", // ✅ damit auch Packages indiziert werden
+    "scripts/**/*.ts" // ✅ damit auch Packages indiziert werden
+, "scripts/gen-ui-index.cjs"  ],
   "exclude": [
     "node_modules",
-    "archive/**", // Entspricht der ESLint ignore
+    "archive/**",
     ".next",
     ".github",
     ".history",

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "generate:ui": "node scripts/gen-ui-index.cjs",
     "generate_module:types": "appwrite-types-gen",
     "generate:types": "node --loader ts-node/esm scripts/generate-types.mts",
     "test": "jest",
