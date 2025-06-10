@@ -1,0 +1,11 @@
+// apps/gateway/tsconfig.json
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@middleware/*": ["middleware/*"]
+    }
+  },
+  "include": ["./**/*"]
+}
