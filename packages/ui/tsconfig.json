@@ -4,8 +4,13 @@
     "composite": true,
     "outDir": "dist",
     "baseUrl": ".",
+    "moduleResolution": "Node",
     "jsx": "preserve",
-    "isolatedModules": false
+    "paths": {
+      "@fecs/ui": ["."],
+      "@fecs/ui/*": ["./*"],
+      "@fecs/shadcn-ui/*": ["./shadcn/*"]
+    }
   },
-  "include": ["./*.ts", "./*.tsx"]
+  "include": ["*.ts", "*.tsx", "**/*/*.ts", "**/*/*.tsx"]
 }

@@ -1,1 +1,21 @@
-{}
+{
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/.github": true,
+    ".github": true,
+    "**/.history": true,
+    ".history": true,
+    "**/.next": true,
+    ".next": true,
+    "**/.swc": true,
+    ".swc": true,
+    "**/node_modules": true,
+    "node_modules": true
+  },
+  "explorerExclude.backup": {}
+}
