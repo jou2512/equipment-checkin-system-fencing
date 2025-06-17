@@ -5,7 +5,15 @@ import createMDX from "@next/mdx";
 dotenv.config();
 
 const withMDX = createMDX({
-  extension: /\.mdx?$/
+  extension: /\.mdx?$/,
+  options: {
+    remarkPlugins: [],
+    rehypePlugins: [],
+    // Hier definieren Sie die zentrale Komponenten-Datei
+    providerImportSource: "@mdx-js/react",
+    // ODER für eine benutzerdefinierte Datei:
+    // development: false, // für bessere Performance in dev
+  },
 });
 
 export default withMDX({

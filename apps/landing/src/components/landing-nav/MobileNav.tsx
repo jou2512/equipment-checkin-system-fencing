@@ -3,9 +3,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Button } from "@fecs/ui/shadcn/button";
+import { Button } from "@fecs/ui";
 import { Menu } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@fecs/ui/shadcn/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "@fecs/ui/client-only";
 import { LandingNavigationBarRouteItem } from "./config";
 
 export function MobileNav({

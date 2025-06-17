@@ -1,16 +1,19 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "composite": true,
-    "outDir": "dist",
-    "baseUrl": ".",
-    "moduleResolution": "Node",
+    "declaration": true,
+    "emitDeclarationOnly": false,
+    "outDir": "./dist",
+    "module": "ESNext",
+    "target": "ES2017",
     "jsx": "preserve",
-    "paths": {
-      "@fecs/ui": ["."],
-      "@fecs/ui/*": ["./*"],
-      "@fecs/shadcn-ui/*": ["./shadcn/*"]
-    }
+    "moduleResolution": "Node",
+    "isolatedModules": false,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "incremental": false
   },
-  "include": ["*.ts", "*.tsx", "**/*/*.ts", "**/*/*.tsx"]
+  "include": ["./**/*"],
+  "exclude": ["dist", "node_modules", "**/*.d.ts", "vite.config.ts"]
 }

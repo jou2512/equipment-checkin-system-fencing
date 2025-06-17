@@ -1,6 +1,6 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities;
+
 
 @font-face {
   font-family: "Twemoji Country Flags";
@@ -92,3 +92,5 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@tailwind utilities;

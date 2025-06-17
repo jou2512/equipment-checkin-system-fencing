@@ -1,19 +1,23 @@
+// scripts/gen-ui-index.cjs
 const fs = require("fs");
 const path = require("path");
 
-const componentsDir = path.resolve(__dirname, "../packages/ui/shadcn");
-const indexPath = path.resolve(__dirname, "../packages/ui/index.ts");
+const srcDir = path.resolve(__dirname, "../packages/ui/shadcn");
+const indexFile = path.join(srcDir, "index.ts");
 
-const files = fs.readdirSync(componentsDir);
-const tsxFiles = files.filter((f) => f.endsWith(".tsx"));
+const files = fs
+  .readdirSync(srcDir)
+  .filter(
+    (file) =>
+      (file.endsWith(".tsx") || file.endsWith(".ts")) &&
+      !file.startsWith("index.")
+  );
 
-const exportLines = tsxFiles
-  .map((file) => {
-    const name = file.replace(/\.tsx$/, "");
-    return `export * from "./shadcn/${name}";`;
-  })
-  .join("\n");
+const lines = files.map((file) => {
+  const name = path.basename(file, path.extname(file));
+  return `export * from "./${name}";`;
+});
 
-fs.writeFileSync(indexPath, exportLines + "\n");
+fs.writeFileSync(indexFile, lines.join("\n") + "\n");
 
-console.log(`✅ Generated ${tsxFiles.length} exports in packages/ui/index.ts`);
+console.log(`✅ Generated shadcn/index.ts with ${files.length} exports.`);

@@ -16,7 +16,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . && tsc --noEmit",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "create": "node --loader ts-node/esm scripts/create-turnier.ts"
   },
   "type": "module",
   "dependencies": {
@@ -109,12 +110,14 @@
     "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "15.1.0",
+    "fs-extra": "^11.3.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "msw": "^2.6.8",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.16",
     "ts-node": "^10.9.2",
+    "tsup": "^8.5.0",
     "typescript": "^5"
   },
   "overrides": {

@@ -1,4 +1,4 @@
 packages:
-  - 'services/*'
-  - 'packages/*'
-  - 'apps/*'
+  - apps/landing
+  - packages/ui
+  - packages/tailwind-config

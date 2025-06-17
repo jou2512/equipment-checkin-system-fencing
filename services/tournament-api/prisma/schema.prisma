@@ -1,0 +1,69 @@
+// File: services/tournament-api/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tournament {
+  id             String        @id @default(cuid())
+  name           String
+  activeWeapons String[]
+  itemConfigs    ItemConfig[]
+  checkIns       CheckIn[]
+}
+
+model CheckIn {
+  id                 String           @id @default(cuid())
+  checkNumber        Int
+  fencerName         String
+  nationalityCode    String
+  weaponType         String
+  eventKey           String
+  checkInStatus      String
+  pickupConfirmed    Boolean          @default(false)
+  tournament         Tournament?      @relation(fields: [tournamentId], references: [id])
+  tournamentId       String?
+  itemChecks         CheckInItem[]
+  submissions        Submission[]     @relation("CheckInSubmissions")
+  currentVersion     Int?
+  latestSubmission   Submission?      @relation("CheckInLatestSubmission", fields: [latestSubmissionId], references: [id])
+  latestSubmissionId String?            @unique
+  createdAt          DateTime         @default(now())
+}
+
+model CheckInItem {
+  id          String   @id @default(cuid())
+  itemName    String
+  quantity    Int
+  status      String
+  checkIn     CheckIn  @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+  checkInId   String
+}
+
+model Submission {
+  id                  String    @id @default(cuid())
+  checkIn             CheckIn?  @relation("CheckInSubmissions", fields: [checkInId], references: [id])
+  checkInId           String?
+  latestOfCheckIn     CheckIn?  @relation("CheckInLatestSubmission")
+  checkInKey          String
+  versionNumber       Int
+  snapshotJson        String
+  changesJson         String?
+  action              String
+  comment             String?
+  createdAt           DateTime  @default(now())
+}
+
+model ItemConfig {
+  id           String     @id @default(cuid())
+  maxQuantity  Int
+  required     Boolean
+  itemName     String
+  tournament   Tournament? @relation(fields: [tournamentId], references: [id])
+  tournamentId String?
+}

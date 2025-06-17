@@ -1,0 +1,67 @@
+version: '3.9'
+
+services:
+  core_auth_db:
+    image: postgres:16
+    container_name: core_auth_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: core_auth
+    ports:
+      - "5432:5432"
+    volumes:
+      - core_auth_data:/var/lib/postgresql/data
+    networks:
+      - core_net
+
+  auth-service:
+    build:
+      context: ../../services/auth-service
+    container_name: auth-service
+    restart: always
+    ports:
+      - "4001:4001"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@core_auth_db:5432/core_auth
+    depends_on:
+      - core_auth_db
+      - tournament-core
+    networks:
+      - core_net
+
+  tournament-core:
+    build:
+      context: ../../services/tournament-core
+    container_name: tournament-core
+    restart: always
+    ports:
+      - "4200:4200"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@core_auth_db:5432/fecs_tournaments?schema=public
+    depends_on:
+      - core_auth_db
+    networks:
+      - core_net
+
+  tournament-api:
+    build:
+      context: ../../services/tournament-api
+    container_name: tournament-api
+    restart: always
+    ports:
+      - "4002:4002"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@core_auth_db:5432/fecs_tournaments?schema=public
+    depends_on:
+      - core_auth_db
+      - tournament-core
+    networks:
+      - core_net
+
+volumes:
+  core_auth_data:
+
+networks:
+  core_net:

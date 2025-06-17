@@ -1,7 +1,7 @@
 // components/landing-nav/Navigation.tsx
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@fecs/ui/lib/utils";
+import { cn } from "@fecs/ui";
 import { LandingNavigationBarRouteItem } from "./config";
 
 export function Navigation({
@@ -18,7 +18,7 @@ export function Navigation({
           key={item.href}
           href={item.href}
           className={cn(
-            "text-sm font-medium transition-colors hover:text-primary",
+            "text-md font-medium transition-colors hover:text-primary",
             pathname === item.href ? "text-foreground" : "text-foreground/60"
           )}
         >

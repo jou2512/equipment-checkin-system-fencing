@@ -1,14 +1,17 @@
 // app/documentation/page.tsx
 import { Metadata } from "next";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from "@fecs/ui";
+//FIXME - this import should be in a client-only file, but is needed for the tabs
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@fecs/ui/client-only";
 import { Terminal } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -56,11 +59,11 @@ export default function DocumentationPage() {
                 streamline the equipment verification process at fencing
                 tournaments.
               </p>
-              {/* Add more content */}
+              {/* TODO - Add More content here */}
             </CardContent>
           </Card>
         </TabsContent>
-        {/* Add other tab contents */}
+        {/* TODO - Add another Tab contents */}
       </Tabs>
     </div>
   );

@@ -1,10 +1,9 @@
+import base from "@fecs/tailwind-config";
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  content: ["./**/*.{ts,tsx}"],
-  theme: {
-    extend: {}
-  },
+  ...base,
+  content: ["./src/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./shadcn/**/*.{ts,tsx}", "./**/*.{ts,tsx}"],
   plugins: [require("tailwindcss-animate")]
 };
 

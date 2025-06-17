@@ -1,5 +1,5 @@
-import { Card, CardContent } from "@fecs/ui/shadcn/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@fecs/ui/shadcn/avatar";
+import { Card, CardContent } from "@fecs/ui";
+import { Avatar, AvatarFallback, AvatarImage } from "@fecs/ui/client-only";
 import { Mail, Phone } from "lucide-react";
 import { SocialLinks } from "./SocialLinks";
 import { TeamMember } from "@/lib/types/landingpage";

@@ -1,12 +1,12 @@
 // components/landing-page/hero-section.tsx
-import { Button } from "@fecs/ui/shadcn/button";
+import { Button } from "@fecs/ui";
 import { ArrowRight, Shield, Swords, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 export function HeroSection() {
   return (
     <div className="relative overflow-hidden bg-background">
-      <div className="mx-auto max-w-7xl px-6 pb-24 pt-10 sm:pt-10 sm:pb-32 lg:flex lg:px-8 lg:py-40">
+      <div className="mx-auto max-w-7xl px-6 pb-24 pt-10 sm:pt-10 sm:pb-32 lg:flex lg:px-8 lg:py-10">
         <div className="mx-auto max-w-2xl flex-shrink-0 lg:mx-0 lg:max-w-xl lg:pt-8">
           <div className="mt-0 sm:mt-24 lg:mt-16">
             <div className="inline-flex space-x-6">
@@ -38,7 +38,7 @@ export function HeroSection() {
             </Link>
           </div>
         </div>
-        <div className="mx-auto mt-16 max-w-2xl sm:mt-24 lg:ml-10 lg:mr-0 lg:mt-0 lg:max-w-none lg:flex-none xl:ml-32">
+        <div className="mx-auto mt-16 max-w-2xl sm:mt-24 lg:ml-10 lg:mr-0  lg:max-w-none lg:flex-none xl:ml-32">
           <div className="max-w-full flex-none sm:max-w-5xl lg:max-w-none">
             <div className="rounded-lg bg-card p-4 sm:p-8 shadow-lg">
               {/* Placeholder for equipment check illustration or animation */}

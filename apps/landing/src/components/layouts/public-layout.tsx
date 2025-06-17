@@ -1,9 +1,10 @@
-"use client";
+"use client"
 
-import { LandingNavBar } from "@/components/landing-nav";
+import type React from "react"
+import { LandingNavBar } from "@/components/landing-nav"
 
 interface PublicLayoutProps {
-  children: React.ReactNode;
+  children: React.ReactNode
 }
 
 export function PublicLayout({ children }: PublicLayoutProps) {
@@ -14,5 +15,5 @@ export function PublicLayout({ children }: PublicLayoutProps) {
       </header>
       <main className="flex-1 pt-16">{children}</main>
     </div>
-  );
+  )
 }

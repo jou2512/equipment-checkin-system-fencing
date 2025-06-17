@@ -1,12 +1,12 @@
+import base from "@fecs/tailwind-config";
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  darkMode: ["class"],
-  content: ["./src/**/*.{ts,tsx}"],
-  theme: {
-    extend: {}
-  },
-  plugins: []
+  ...base,
+  content: [
+    "./src/**/*.{ts,tsx}",
+    "../../packages/ui/**/*.{ts,tsx}"
+  ]
 };
 
 export default config;

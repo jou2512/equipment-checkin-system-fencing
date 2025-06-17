@@ -86,4 +86,4 @@ const baseConfig = {
 } satisfies Partial<Config>;
 
 // export base.css from "./base.css";
-export { baseConfig };
+export default baseConfig;

@@ -1,68 +1,35 @@
+// apps/landing/src/app/pre-registration/page.tsx
 "use client";
 
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { QrCode } from "lucide-react";
-import { QRCodeCanvas } from "qrcode.react";
 
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import {
+  PreRegistrationSchema,
+  PreRegistrationFormData,
+} from "@/lib/validation/pre-registration-schema";
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Button,
+} from "@fecs/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-
-import { useTournamentStore } from "@/lib/store/tournament-store";
-import { useTournaments } from "@/hooks/use-tournaments";
-import { databases } from "@/lib/appwrite/config";
-import { ID } from "appwrite";
-import {
-  TournamentActiveWeaponsType,
-  DATABASE_IDS,
-  COLLECTION_IDS,
-} from "@/lib/appwrite/types";
-
-// Validation Schema
-const PreRegistrationSchema = z.object({
-  firstName: z.string().min(2, "First name is required"),
-  lastName: z.string().min(2, "Last name is required"),
-  email: z.string().email("Invalid email address"),
-  nationalityCode: z
-    .string()
-    .length(3, "Nationality code must be 3 letters")
-    .regex(/^[A-Z]{3}$/, "Nationality code must be uppercase"),
-  weapon: z.enum(["epee", "foil", "sabre"]),
-  agreeTerms: z.boolean().refine((val) => val, "You must agree to the terms"),
-  clubName: z.string().optional(),
-});
-
-type PreRegistrationFormData = z.infer<typeof PreRegistrationSchema>;
+  Checkbox,
+  Label,
+} from "@fecs/ui/client-only";
 
 export default function PreRegistrationPage() {
-  const { currentTournamentId } = useTournamentStore();
-  const { SelectedTournament } = useTournaments();
-  const { tournament } = SelectedTournament();
-
-  const [qrCodeValue, setQrCodeValue] = useState<string | null>(null);
+  const [formSubmitted, setFormSubmitted] = useState(false);
   const [registrationError, setRegistrationError] = useState<string | null>(
     null
   );
@@ -81,65 +48,36 @@ export default function PreRegistrationPage() {
   });
 
   const onSubmit = async (data: PreRegistrationFormData) => {
-    // TODO: Check for existing registrations using the same email to prevent
-    //       duplicate entries.
-    // TODO: Perform server-side validation of the submitted data.
+    // TODO: Implement form submission logic using your preferred backend adapter
     try {
-      // Create pre-registration document
-      const preRegistration = await databases.createDocument(
-        DATABASE_IDS.CHECKING_SYSTEM,
-        // @ts-ignore
-        COLLECTION_IDS.PRE_REGISTRATIONS, // Assuming this collection exists
-        ID.unique(),
-        {
-          ...data,
-          tournamentId: currentTournamentId,
-          status: "pending",
-          registeredAt: new Date().toISOString(),
-        }
-      );
-
-      // Generate QR code value (could be a unique registration ID or link)
-      const qrValue = `https://yourdomain.com/registration/${preRegistration.$id}`;
-      // TODO: Send a confirmation email to the fencer containing this QR code.
-      // TODO: Persist the QR code so staff can retrieve it later if needed.
-      setQrCodeValue(qrValue);
-
-      // Reset form
+      console.log("Form submitted with data:", data);
+      setFormSubmitted(true);
       reset();
       setRegistrationError(null);
     } catch (error) {
-      // TODO: Display more detailed error messages to the user.
       setRegistrationError("Registration failed. Please try again.");
-      console.error(error);
     }
   };
 
-  // Determine available weapons based on tournament configuration
-  const availableWeapons =
-    (tournament?.activeWeapons as TournamentActiveWeaponsType[]) || [];
-
-  // TODO: Integrate reCAPTCHA or similar verification before allowing
-  //       form submission to reduce spam.
+  const availableWeapons = ["epee", "foil", "sabre"]; // FIXME: should be dynamic
 
   return (
     <div className="container mx-auto max-w-2xl py-12">
       <Card>
         <CardHeader>
-          <CardTitle>Pre-Registration for {tournament?.name}</CardTitle>
+          <CardTitle>Pre-Registration</CardTitle>
+          {/* TODO: Replace static title with dynamic tournament name if needed */}
         </CardHeader>
         <CardContent>
-          {qrCodeValue ? (
+          {formSubmitted ? (
             <div className="text-center space-y-6">
               <h2 className="text-2xl font-bold">Registration Successful!</h2>
-              <div className="flex justify-center">
-                <QRCodeCanvas value={qrCodeValue} size={256} />
-              </div>
+              {/* TODO: Show QR or confirmation code from backend */}
               <p className="text-muted-foreground">
-                Please save or screenshot this QR code for check-in
+                Thank you! You'll receive a confirmation soon.
               </p>
-              <Button onClick={() => setQrCodeValue(null)}>
-                Register Another Fencer
+              <Button onClick={() => setFormSubmitted(false)}>
+                Register Another
               </Button>
             </div>
           ) : (
@@ -252,7 +190,7 @@ export default function PreRegistrationPage() {
                   )}
                 />
                 <Label htmlFor="terms">
-                  I agree to the tournament terms and conditions
+                  I agree to the terms and conditions
                 </Label>
               </div>
               {errors.agreeTerms && (

@@ -1,22 +1,39 @@
 {
   "name": "auth-service",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Central authentication service for FECS platform",
+  "main": "src/index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "generate": "prisma generate",
+    "migrate": "prisma migrate dev",
+    "seed": "ts-node prisma/seed.ts",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write ."
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "FECS Team",
+  "license": "MIT",
   "dependencies": {
+    "@prisma/client": "6.9.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.17",
     "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.4",
     "@types/node": "^20.17.10",
+    "prisma": "6.9.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.5"
   }
 }

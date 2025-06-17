@@ -1,0 +1,26 @@
+{
+  "name": "landing",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@fecs/tailwind-config": "workspace:*",
+    "@fecs/ui": "file:../../packages/ui",
+    "@mdx-js/react": "^3.1.0",
+    "@next/mdx": "^15.3.3",
+    "next": "15.1.0",
+    "next-mdx-remote": "^5.0.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "rehype-highlight": "^7.0.2",
+    "rehype-slug": "^6.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-toc": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/mdx": "^2.0.13"
+  }
+}

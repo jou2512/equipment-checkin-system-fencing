@@ -1,10 +1,10 @@
-// app/layout.tsx
+import type React from "react";
+// Server-safe utilities aus dem main entry point
 import { cn } from "@fecs/ui";
 import { ClientProviders } from "@/providers/client-providers";
 import "./globals.css";
-import { PublicLayout } from "@/components/layouts/public-layout";
+import { ClientLayoutWrapper } from "@/components/layouts/client-layout-wrapper";
 
-// Metadata configuration
 export const metadata = {
   title: {
     default: "FECS - Fencing Equipment Check System",
@@ -18,7 +18,7 @@ interface RootLayoutProps {
   children: React.ReactNode;
 }
 
-export default async function RootLayout({ children }: RootLayoutProps) {
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
@@ -28,11 +28,11 @@ export default async function RootLayout({ children }: RootLayoutProps) {
           "flex flex-col"
         )}
       >
-        <ClientProviders>
+        {<ClientProviders>
           <div className="relative flex min-h-screen flex-col">
-            <PublicLayout>{children}</PublicLayout>
+            <ClientLayoutWrapper>{children}</ClientLayoutWrapper>
           </div>
-        </ClientProviders>
+        </ClientProviders>}
       </body>
     </html>
   );
