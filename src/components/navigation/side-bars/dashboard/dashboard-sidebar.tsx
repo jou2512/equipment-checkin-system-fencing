@@ -11,7 +11,7 @@ import {
 import { usePathname } from "next/navigation";
 import { ADMIN_ROUTES } from "@/config/admin-routes";
 import { NavUser } from "../../nav-user";
-import { DashboardSidebarGroup } from "../dashboard/elements/dashboard-sidebar-group";
+import { DashboardSidebarGroup } from "./elements/dashboard-sidebar-group";
 import { TournamentSwitcher } from "../../tournament-switcher";
 
 export interface DashboardSidebarProps extends React.ComponentProps<typeof Sidebar> {
